@@ -1,10 +1,81 @@
-import { useAuth } from "@getmocha/users-service/react";
-import { useEffect } from "react";
-import { Navigate } from "react-router";
+// import { useAuth } from "@getmocha/users-service/react";
+import { useMutation } from "@tanstack/react-query";
+import { Link, Navigate, useNavigate } from "react-router";
+import { useAppDispatch, useAppSelector } from "@/react-app/lib/hooks";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { LoginBody, LoginResponseData } from "../types/auth";import { toast } from "react-toastify";
+import { setUser } from "@/react-app/lib/features/auth/authSlice";
+import TextInput from "../components/input/TextInput";
+import { login } from "../api/auth";
+
+
+import { useEffect, useState } from "react";
+//styles
 import { Music, Sparkles, Users } from "lucide-react";
 
 export default function LoginPage() {
-  const { user, redirectToLogin, isPending } = useAuth();
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const { user } = useAppSelector((state) => state.auth);
+  const [            , setHasLoggedIn] = useState(false);
+  // Validation Schema
+  const schema = z.object({
+    email: z.string().email("Invalid email address").min(1, "Email is required"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+  });
+
+  type LoginFormValues = z.infer<typeof schema>;
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    // setValue,
+    formState: { errors },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(schema),
+    mode: "onChange",
+  });
+
+  const email = watch("email");
+  const password = watch("password");
+
+  const formIsFilled = email && password;
+
+  const mutation = useMutation({
+    mutationFn: (payload: LoginBody) => {
+      return login(payload);
+    },
+    onSuccess: (data: LoginResponseData) => {
+      const token = data.tokens.access.token;
+      const user = data.user;
+      localStorage.setItem("tkn", token);
+      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.removeItem("email");
+
+      console.log("Login successful:", user);
+
+      setHasLoggedIn(true);
+      dispatch(setUser(user));
+      toast.success("Logged in successfully");
+
+      const userRole = user.role.toLowerCase();
+
+      // Navigate based on role
+      switch (userRole) {
+        case "manager":
+        case "admin":
+        case "user":
+          navigate("/admin");
+          break;
+        default:
+          toast.error("Unauthorized access. Contact support.");
+          break;
+      }
+    },
+  });
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -17,13 +88,15 @@ export default function LoginPage() {
     return <Navigate to="/admin" replace />;
   }
 
-  if (isPending) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-      </div>
-    );
-  }
+  const onSubmit = (data: LoginFormValues) => {
+    const payload = {
+      email: data.email,
+      password: data.password,
+    };
+
+    mutation.mutate(payload);
+    // return <Navigate to="/admin" replace />;
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 relative overflow-hidden">
@@ -68,12 +141,63 @@ export default function LoginPage() {
           </div>
 
           {/* Login button */}
-          <button
+          {/* <button
             onClick={redirectToLogin}
-            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold py-4 px-6 rounded-2xl hover:from-purple-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+            className="w-full bg-gradient-toa-r from-purple-600 to-blue-600 text-white font-semibold py-4 px-6 rounded-2xl hover:from-purple-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
           >
             Continue with Google
-          </button>
+          </button> */}
+
+          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+            <TextInput
+              type="email"
+              label="Email address"
+              placeholder="Enter email address"
+              register={register("email")}
+              errorMessage={errors.email?.message ?? ""}
+              loading={mutation.isPending}
+            />
+
+            <TextInput
+              type="password"
+              label="Password"
+              placeholder="Enter your password"
+              isPassword={true}
+              register={register("password")}
+              errorMessage={errors.password?.message ?? ""}
+              loading={mutation.isPending}
+            />
+
+            <div>
+              <button
+                type="submit"
+                disabled={!formIsFilled || mutation.isPending}
+                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold py-4 px-6 rounded-2xl hover:from-purple-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+              >
+                <span>{mutation.isPending ? "Loading..." : "Sign in"}</span>
+              </button>
+              {/* <button
+                type="submit"
+                disabled={!formIsFilled || mutation.isPending}
+                className="flex items-center justify-center w-full rounded-md theme-bg-accent theme-text-on-accent px-3 py-1.5 text-sm font-semibold leading-6 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                <span>{mutation.isPending ? "Loading..." : "Sign in"}</span>
+              </button> */}
+
+              <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <Link to="/auth/forgot-password" className="theme-text-primary text-xs">
+                  Forgot password?
+                </Link>
+
+                {/* <p className="theme-text-primary text-xs">
+                  Don't have an account?
+                  <Link to="/auth/register" className="ml-1">
+                    Register
+                  </Link>
+                </p> */}
+              </div>
+            </div>
+          </form>
 
           <p className="text-center text-blue-100 text-xs mt-6">
             Secure admin access for authorized personnel only

@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef } from "react";
 import { Upload, X, Image, AlertCircle } from "lucide-react";
+import { uploadImageToCloud } from "../api/imageUploud";
 
 interface ImageUploadProps {
   onUpload: (url: string) => void;
@@ -35,7 +37,7 @@ export default function ImageUpload({
     return null;
   };
 
-  const uploadImage = async (file: File) => {
+  const uploadImage = async (file: any) => {
     const validationError = validateFile(file);
     if (validationError) {
       setError(validationError);
@@ -53,18 +55,14 @@ export default function ImageUpload({
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await fetch('/api/admin/upload/image', {
-        method: 'POST',
-        credentials: 'include',
-        body: formData,
-      });
+      const response = await uploadImageToCloud(file);
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      if (response.status !== 200) {
+        const errorData = await response.data.json();
         throw new Error(errorData.error || 'Upload failed');
       }
 
-      const data = await response.json();
+      const data = await response.data;
       
       // Clean up the temporary preview URL
       URL.revokeObjectURL(objectUrl);

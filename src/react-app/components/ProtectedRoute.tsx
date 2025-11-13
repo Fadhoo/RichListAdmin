@@ -7,10 +7,12 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user } = useAuth();
+  // const { user } = useAuth();
   const loading = false; // Auth loading is handled by AuthProvider
 
-  if (loading) {
+  const auth = localStorage.getItem("tkn");
+
+   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <LoadingSpinner size="lg" />
@@ -18,9 +20,9 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  if (!user) {
+  if (auth === null) {
     return <Navigate to="/login" replace />;
   }
-
+  
   return <>{children}</>;
 }

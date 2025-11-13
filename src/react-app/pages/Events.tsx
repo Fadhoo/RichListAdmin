@@ -3,14 +3,19 @@ import AdminLayout from "@/react-app/components/AdminLayout";
 import DeleteConfirmModal from "@/react-app/components/DeleteConfirmModal";
 import EventEditModal from "@/react-app/components/EventEditModal";
 import DataTable, { TableColumn } from "@/react-app/components/DataTable";
-import { useServerSideTable } from "@/react-app/hooks/useServerSideTable";
 import { Plus, Calendar, MapPin, Clock, DollarSign, Users, CheckCircle, XCircle, AlertCircle, Trash2, Edit } from "lucide-react";
-import type { Event, CreateEvent, Venue } from "@/shared/types";
+import type { Event, CreateEvent } from "../types/events";
+import { Venue } from "../types/venue";
 import ImageUpload from "@/react-app/components/ImageUpload";
-
+import { useEvents } from "../hooks/useEvents";
+// import { useVenues } from "../hooks/useVenues";
+import { fetchVenues } from "../api/venues";
+import { editEvent } from "../api/events";
+import { set } from "react-hook-form";
 interface EventWithVenue extends Event {
   venue_name: string;
   venue_address: string;
+  venue_capacity?: number;
 }
 
 // Define table columns
@@ -21,10 +26,10 @@ const eventColumns: TableColumn<EventWithVenue>[] = [
     sortable: true,
     render: (_, record) => (
       <div className="flex items-start space-x-4">
-        {record.image_url ? (
+        {record.imageId ? (
           <img
-            src={record.image_url}
-            alt={record.title}
+            src={record.imageId}
+            alt={record.name}
             className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
@@ -35,19 +40,19 @@ const eventColumns: TableColumn<EventWithVenue>[] = [
             <Calendar className="w-8 h-8 text-white opacity-50" />
           </div>
         )}
-        <div className="flex-1 min-w-0">
+        {/* <div className="flex-1 min-w-0">
           <div className="flex items-center space-x-3 mb-2">
-            <h3 className="text-sm font-semibold text-gray-900 truncate">{record.title}</h3>
-            {record.is_house_party && (
+            <h3 className="text-sm font-semibold text-gray-900 truncate">{record.name}</h3>
+            {record.type === 'house party' && (
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
                 House Party
               </span>
             )}
           </div>
-          {record.description && (
-            <p className="text-xs text-gray-600 line-clamp-2">{record.description}</p>
+          {record.desc && (
+            <p className="text-xs text-gray-600 line-clamp-2">{record.desc}</p>
           )}
-        </div>
+        </div> */}
       </div>
     ),
   },
@@ -59,11 +64,11 @@ const eventColumns: TableColumn<EventWithVenue>[] = [
       <div className="text-sm space-y-1">
         <div className="flex items-center space-x-1">
           <Calendar className="w-4 h-4 text-gray-400" />
-          <span>{new Date(record.event_date).toLocaleDateString()}</span>
+          <span>{new Date(record.date).toLocaleDateString()}</span>
         </div>
         <div className="flex items-center space-x-1">
           <Clock className="w-4 h-4 text-gray-400" />
-          <span>{record.start_time || 'TBD'} - {record.end_time || 'TBD'}</span>
+          <span>{record.time || 'TBD'} - {'TBD'}</span>
         </div>
       </div>
     ),
@@ -84,19 +89,31 @@ const eventColumns: TableColumn<EventWithVenue>[] = [
     sortable: true,
     render: (_, record) => (
       <div className="text-sm space-y-1">
-        {record.base_price && (
+        {record.price && (
           <div className="flex items-center space-x-1">
             <DollarSign className="w-4 h-4 text-gray-400" />
-            <span>₦{record.base_price.toLocaleString()}</span>
+            <span>₦{record.price.toLocaleString()}</span>
           </div>
         )}
-        {record.max_capacity && (
+        {record.venue_capacity && (
           <div className="flex items-center space-x-1">
             <Users className="w-4 h-4 text-gray-400" />
-            <span>{record.max_capacity.toLocaleString()} max</span>
+            <span>{record.venue_capacity.toLocaleString()} max</span>
           </div>
         )}
       </div>
+    ),
+  },
+  {
+    key: 'isActive',
+    title: 'Active',
+    sortable: true,
+    render: (isActive) => (
+      <span>
+        {isActive ? 'Active' : 'Inactive'}<span>{isActive ? <CheckCircle className="w-4 h-4 text-green-500" /> : <XCircle className="w-4 h-4 text-red-500" />}</span>
+      </span>
+      // Additional styling can be added here
+      
     ),
   },
   {
@@ -141,7 +158,7 @@ const eventColumns: TableColumn<EventWithVenue>[] = [
     },
   },
   {
-    key: 'created_at',
+    key: 'createdAt',
     title: 'Created',
     sortable: true,
     render: (createdAt) => new Date(createdAt).toLocaleDateString(),
@@ -149,10 +166,8 @@ const eventColumns: TableColumn<EventWithVenue>[] = [
 ];
 
 export default function EventsPage() {
-  const [tableState, tableActions] = useServerSideTable({
-    endpoint: '/api/admin/events',
-    initialPageSize: 25,
-  });
+  const eventResult = useEvents({});
+  const [tableState, tableActions] = Array.isArray(eventResult) ? eventResult : [{ data: [], loading: true, totalItems: 0, currentPage: 1, pageSize: 10, searchTerm: '', sortConfig: {}, filters: {} }, {}];
 
   const [venues, setVenues] = useState<Venue[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -168,31 +183,32 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState<CreateEvent>({
-    title: '',
-    description: '',
-    venue_id: 0,
-    event_date: '',
-    start_time: '',
-    end_time: '',
-    base_price: undefined,
-    max_capacity: undefined,
-    image_url: '',
-    is_house_party: false,
+    name: '',
+    desc: '',
+    venueId: '',
+    date: '',
+    time: '',
+    duration: '',
+    price: undefined,
+    // max_capacity: undefined,
+    imageId: '',
+    isFeatured: false,
+    type: 'club',
   });
 
   useEffect(() => {
-    fetchVenues();
+    fetchAllVenues();
   }, []);
 
-  const fetchVenues = async () => {
+  const fetchAllVenues = async () => {
     try {
-      const response = await fetch('/api/admin/venues', {
-        credentials: 'include',
-      });
-      if (response.ok) {
-        const data = await response.json();
+      
+      const response = await fetchVenues( 1, 1000, '', 'createdAt:desc' );
+
+      if (response.status === 200) {
+        const data = response.data;
         // Handle paginated response
-        setVenues(data.data || data);
+        setVenues(data.results || data);
       } else {
         console.error('Failed to fetch venues:', response.status);
         alert('Failed to load venues. Please refresh the page.');
@@ -209,26 +225,26 @@ export default function EventsPage() {
     setErrors({});
     
     // Validate required fields
-    if (!formData.title.trim()) {
+    if (!formData.name.trim()) {
       setErrors({ title: 'Event title is required' });
       setLoading(false);
       return;
     }
     
-    if (!formData.venue_id || formData.venue_id === 0) {
-      setErrors({ venue_id: 'Please select a venue' });
+    if (!formData.venueId || formData.venueId === '') {
+      setErrors({ venueId: 'Please select a venue' });
       setLoading(false);
       return;
     }
     
-    if (!formData.event_date) {
+    if (!formData.date) {
       setErrors({ event_date: 'Event date is required' });
       setLoading(false);
       return;
     }
 
     // Validate date is not in the past
-    const selectedDate = new Date(formData.event_date);
+    const selectedDate = new Date(formData.date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -260,16 +276,16 @@ export default function EventsPage() {
         tableActions.refresh(); // Refresh the table data
         setShowForm(false);
         setFormData({
-          title: '',
-          description: '',
-          venue_id: 0,
-          event_date: '',
-          start_time: '',
-          end_time: '',
-          base_price: undefined,
-          max_capacity: undefined,
-          image_url: '',
-          is_house_party: false,
+          name: '',
+          desc: '',
+          venueId: '',
+          date: '',
+          time: '',
+          duration: '',
+          price: undefined,
+          type: 'club',
+          imageId: '',
+          isFeatured: false,
         });
         setErrors({});
       } else {
@@ -285,21 +301,16 @@ export default function EventsPage() {
     }
   };
 
-  const updateEventStatus = async (eventId: number, status: string) => {
+  const updateEventStatus = async (eventId: string, status: string) => {
     try {
-      const response = await fetch(`/api/admin/events/${eventId}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ status }),
-      });
+      setLoading(true);
+      const response = await editEvent(eventId, { status });
+      setLoading(false);
 
-      if (response.ok) {
+      if (response.status === 200) {
         tableActions.refresh(); // Refresh the table data
       } else {
-        const error = await response.json();
+        const error = await response.data.json();
         alert(error.error || 'Failed to update event status');
       }
     } catch (error) {
@@ -397,21 +408,22 @@ export default function EventsPage() {
                   </label>
                   <select
                     required
-                    value={formData.venue_id}
-                    onChange={(e) => setFormData({ ...formData, venue_id: parseInt(e.target.value) })}
+                    value={formData.venueId}
+                    onChange={(e) => setFormData({ ...formData, venueId: e.target.value })}
                     className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                      errors.venue_id ? 'border-red-300' : 'border-gray-300'
+                      errors.venueId ? 'border-red-300' : 'border-gray-300'
                     }`}
                     disabled={loading}
                   >
-                    <option value={0}>Select a venue</option>
+                    <option value={''}>Select a venue</option>
                     {venues.map((venue) => (
+                      console.log("Rendering venue option:", venue),
                       <option key={venue.id} value={venue.id}>
                         {venue.name}
                       </option>
                     ))}
                   </select>
-                  {errors.venue_id && <p className="text-red-600 text-sm mt-1">{errors.venue_id}</p>}
+                  {errors.venueId && <p className="text-red-600 text-sm mt-1">{errors.venueId}</p>}
                 </div>
               </div>
 
@@ -420,8 +432,8 @@ export default function EventsPage() {
                   Description
                 </label>
                 <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  value={formData.desc ?? ""}
+                  onChange={(e) => setFormData({ ...formData, desc: e.target.value })}
                   rows={3}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="Describe the event..."
@@ -437,15 +449,15 @@ export default function EventsPage() {
                   <input
                     type="date"
                     required
-                    value={formData.event_date}
-                    onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                     min={new Date().toISOString().split('T')[0]}
                     className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                      errors.event_date ? 'border-red-300' : 'border-gray-300'
+                      errors.date ? 'border-red-300' : 'border-gray-300'
                     }`}
                     disabled={loading}
                   />
-                  {errors.event_date && <p className="text-red-600 text-sm mt-1">{errors.event_date}</p>}
+                  {errors.date && <p className="text-red-600 text-sm mt-1">{errors.date}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -453,19 +465,19 @@ export default function EventsPage() {
                   </label>
                   <input
                     type="time"
-                    value={formData.start_time}
-                    onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                    value={formData.time || ''}
+                    onChange={(e) => setFormData({ ...formData, time: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     disabled={loading}
                   />
                 </div>
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     End Time
                   </label>
                   <input
                     type="time"
-                    value={formData.end_time}
+                    value={new Date(formData.time).getTime() + duration || ''}
                     onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
                     className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                       errors.end_time ? 'border-red-300' : 'border-gray-300'
@@ -473,34 +485,21 @@ export default function EventsPage() {
                     disabled={loading}
                   />
                   {errors.end_time && <p className="text-red-600 text-sm mt-1">{errors.end_time}</p>}
-                </div>
+                </div> */}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Base Price (₦)
+                    Base Price/ Minimum order for clubs (₦)
                   </label>
                   <input
                     type="number"
                     step="0.01"
-                    value={formData.base_price || ''}
-                    onChange={(e) => setFormData({ ...formData, base_price: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    value={formData.price || ''}
+                    onChange={(e) => setFormData({ ...formData, price: e.target.value ? parseFloat(e.target.value) : undefined })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="0.00"
-                    disabled={loading}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Max Capacity
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.max_capacity || ''}
-                    onChange={(e) => setFormData({ ...formData, max_capacity: e.target.value ? parseInt(e.target.value) : undefined })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="Max attendees"
                     disabled={loading}
                   />
                 </div>
@@ -511,8 +510,8 @@ export default function EventsPage() {
                   Event Image
                 </label>
                 <ImageUpload
-                  onUpload={(url) => setFormData({ ...formData, image_url: url })}
-                  currentImage={formData.image_url}
+                  onUpload={(url) => setFormData({ ...formData, imageId: url })}
+                  currentImage={formData.imageId || ''}
                   maxSizeMB={10}
                 />
               </div>
@@ -521,8 +520,8 @@ export default function EventsPage() {
                 <input
                   type="checkbox"
                   id="house_party"
-                  checked={formData.is_house_party}
-                  onChange={(e) => setFormData({ ...formData, is_house_party: e.target.checked })}
+                  checked={formData.type === 'house party'}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.checked ? 'house party' : '' })}
                   className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
                   disabled={loading}
                 />
@@ -564,7 +563,15 @@ export default function EventsPage() {
 
         {/* Events Table */}
         <DataTable
-          data={tableState.data}
+          data={eventResult[0]?.events.map(event => {
+            const venue = venues.find(v => v.id === event.venueId);
+            return {
+              ...event,
+              venue_name: venue ? venue.name : 'N/A',
+              venue_address: venue ? venue.location : 'N/A',
+              venue_capacity: venue ? venue.capacity : undefined,
+            };
+          })}
           columns={[
             ...eventColumns,
             {
@@ -665,7 +672,7 @@ export default function EventsPage() {
           onConfirm={handleDelete}
           title="Delete Event"
           message="Are you sure you want to delete this event? This action cannot be undone and will affect all associated bookings."
-          itemName={deleteModal.event?.title || ''}
+          itemName={deleteModal.event?.name || ''}
           loading={deleteModal.loading}
         />
       </div>

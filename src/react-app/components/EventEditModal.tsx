@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { X, Save, Calendar } from "lucide-react";
-import type { Event, CreateEvent, Venue } from "@/shared/types";
+import type { Event, CreateEvent } from "../types/events";
+import { Venue } from "../types/venue";
 import ImageUpload from "@/react-app/components/ImageUpload";
+import { editEvent } from "../api/events";
 
 interface EventWithVenue extends Event {
   venue_name: string;
@@ -24,16 +26,18 @@ export default function EventEditModal({
   onUpdate,
 }: EventEditModalProps) {
   const [formData, setFormData] = useState<CreateEvent>({
-    title: '',
-    description: '',
-    venue_id: 0,
-    event_date: '',
-    start_time: '',
-    end_time: '',
-    base_price: undefined,
-    max_capacity: undefined,
-    image_url: '',
-    is_house_party: false,
+    name: '',
+    desc: '',
+    venueId: '',
+    date: '',
+    time: '',
+    duration: '',
+    price: undefined,
+    imageId: '',
+    type: '',
+    isFeatured: false,
+    isActive: true,
+    status: 'pending',
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -41,16 +45,20 @@ export default function EventEditModal({
   useEffect(() => {
     if (event) {
       setFormData({
-        title: event.title,
-        description: event.description || '',
-        venue_id: event.venue_id,
-        event_date: event.event_date.split('T')[0], // Convert to YYYY-MM-DD format
-        start_time: event.start_time || '',
-        end_time: event.end_time || '',
-        base_price: event.base_price || undefined,
-        max_capacity: event.max_capacity || undefined,
-        image_url: event.image_url || '',
-        is_house_party: Boolean(event.is_house_party),
+        name: event.name,
+        desc: event.desc || '',
+        venueId: event.venueId,
+        date: event.date.split('T')[0], // Convert to YYYY-MM-DD format
+        time: event.time || '',
+        duration: event.duration || '',
+        price: event.price || undefined,
+        // capacity: event.venueId.capacity || undefined,
+        imageId: event.imageId || '',
+        type: event.type,
+        isFeatured: event.isFeatured,
+        isActive: event.isActive,
+        status: event.status,
+        // is_house_party: Boolean(event.type === 'house party'),
       });
     }
   }, [event]);
@@ -63,39 +71,31 @@ export default function EventEditModal({
     setErrors({});
 
     // Validate required fields
-    if (!formData.title.trim()) {
-      setErrors({ title: 'Event title is required' });
+    if (!formData.name.trim()) {
+      setErrors({ name: 'Event name is required' });
       setLoading(false);
       return;
     }
     
-    if (!formData.venue_id || formData.venue_id === 0) {
-      setErrors({ venue_id: 'Please select a venue' });
+    if (!formData.venueId || formData.venueId === '') {
+      setErrors({ venueId: 'Please select a venue' });
       setLoading(false);
       return;
     }
     
-    if (!formData.event_date) {
-      setErrors({ event_date: 'Event date is required' });
+    if (!formData.date) {
+      setErrors({ date: 'Event date is required' });
       setLoading(false);
       return;
     }
 
     try {
-      const response = await fetch(`/api/admin/events/${event.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
+      const response = await editEvent(event.id, formData);
+      if (response.status === 200) {
         onUpdate();
         onClose();
       } else {
-        const error = await response.json();
+        const error = await response.data.json();
         setErrors({ general: error.error || 'Failed to update event' });
       }
     } catch (error) {
@@ -142,15 +142,15 @@ export default function EventEditModal({
               <input
                 type="text"
                 required
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                  errors.title ? 'border-red-300' : 'border-gray-300'
+                  errors.name ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Enter event title"
                 disabled={loading}
               />
-              {errors.title && <p className="text-red-600 text-sm mt-1">{errors.title}</p>}
+              {errors.name && <p className="text-red-600 text-sm mt-1">{errors.name}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -158,10 +158,10 @@ export default function EventEditModal({
               </label>
               <select
                 required
-                value={formData.venue_id}
-                onChange={(e) => setFormData({ ...formData, venue_id: parseInt(e.target.value) })}
+                value={formData.venueId}
+                onChange={(e) => setFormData({ ...formData, venueId: e.target.value })}
                 className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                  errors.venue_id ? 'border-red-300' : 'border-gray-300'
+                  errors.venueId ? 'border-red-300' : 'border-gray-300'
                 }`}
                 disabled={loading}
               >
@@ -172,7 +172,7 @@ export default function EventEditModal({
                   </option>
                 ))}
               </select>
-              {errors.venue_id && <p className="text-red-600 text-sm mt-1">{errors.venue_id}</p>}
+              {errors.venueId && <p className="text-red-600 text-sm mt-1">{errors.venueId}</p>}
             </div>
           </div>
 
@@ -181,8 +181,8 @@ export default function EventEditModal({
               Description
             </label>
             <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              value={formData.desc}
+              onChange={(e) => setFormData({ ...formData, desc: e.target.value })}
               rows={3}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="Describe the event..."
@@ -198,14 +198,14 @@ export default function EventEditModal({
               <input
                 type="date"
                 required
-                value={formData.event_date}
-                onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                  errors.event_date ? 'border-red-300' : 'border-gray-300'
+                  errors.date ? 'border-red-300' : 'border-gray-300'
                 }`}
                 disabled={loading}
               />
-              {errors.event_date && <p className="text-red-600 text-sm mt-1">{errors.event_date}</p>}
+              {errors.date && <p className="text-red-600 text-sm mt-1">{errors.date}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -213,24 +213,24 @@ export default function EventEditModal({
               </label>
               <input
                 type="time"
-                value={formData.start_time}
-                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                value={formData.time}
+                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 disabled={loading}
               />
             </div>
-            <div>
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 End Time
               </label>
               <input
                 type="time"
-                value={formData.end_time}
-                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                value={formData.duration}
+                onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 disabled={loading}
               />
-            </div>
+            </div> */}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -241,8 +241,8 @@ export default function EventEditModal({
               <input
                 type="number"
                 step="0.01"
-                value={formData.base_price || ''}
-                onChange={(e) => setFormData({ ...formData, base_price: e.target.value ? parseFloat(e.target.value) : undefined })}
+                value={formData.price || ''}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value ? parseFloat(e.target.value) : undefined })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="0.00"
                 disabled={loading}
@@ -250,17 +250,44 @@ export default function EventEditModal({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Max Capacity
+                Active
               </label>
-              <input
+              <div className="flex items-center space-x-4">
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="isActive"
+                    value="true"
+                    checked={formData.isActive === true}
+                    onChange={() => setFormData({ ...formData, isActive: true })}
+                    className="form-radio text-purple-600"
+                    disabled={loading}
+                  />
+                  <span className="ml-2">Active</span>
+                </label>
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="isActive"
+                    value="false"
+                    checked={formData.isActive === false}
+                    onChange={() => setFormData({ ...formData, isActive: false })}
+                    className="form-radio text-purple-600"
+                    disabled={loading}
+                  />
+                  <span className="ml-2">Inactive</span>
+                </label>
+              </div>
+            </div>
+              {/* <input
                 type="number"
-                value={formData.max_capacity || ''}
-                onChange={(e) => setFormData({ ...formData, max_capacity: e.target.value ? parseInt(e.target.value) : undefined })}
+                value={formData.capacity || ''}
+                onChange={(e) => setFormData({ ...formData, capacity: e.target.value ? parseInt(e.target.value) : undefined })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="Max attendees"
                 disabled={loading}
               />
-            </div>
+            </div> */}
           </div>
 
           <div>
@@ -268,13 +295,13 @@ export default function EventEditModal({
               Event Image
             </label>
             <ImageUpload
-              onUpload={(url) => setFormData({ ...formData, image_url: url })}
-              currentImage={formData.image_url}
+              onUpload={(url) => setFormData({ ...formData, imageId: url })}
+              currentImage={formData.imageId || undefined}
               maxSizeMB={10}
             />
           </div>
 
-          <div className="flex items-center">
+          {/* <div className="flex items-center">
             <input
               type="checkbox"
               id="house_party"
@@ -286,7 +313,7 @@ export default function EventEditModal({
             <label htmlFor="house_party" className="ml-2 text-sm text-gray-700">
               This is a house party (requires approval)
             </label>
-          </div>
+          </div> */}
 
           <div className="flex justify-end space-x-4 pt-6">
             <button

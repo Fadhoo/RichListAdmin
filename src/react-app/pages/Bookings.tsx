@@ -1,26 +1,31 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import AdminLayout from "@/react-app/components/AdminLayout";
 import BookingEditModal from "@/react-app/components/BookingEditModal";
 import DeleteConfirmModal from "@/react-app/components/DeleteConfirmModal";
 import DataTable, { TableColumn } from "@/react-app/components/DataTable";
-import { useServerSideTable } from "@/react-app/hooks/useServerSideTable";
+import { editBooking } from "../api/booking";
 import { Calendar, MapPin, Users, DollarSign, Receipt, Edit, Trash2, TrendingUp, AlertCircle, Check, X } from "lucide-react";
+import { useBooking } from "../hooks/useBooking";
+import { Event } from "../types/events";
+// import { Booking } from "../types/bookings";
 
 interface BookingWithDetails {
   id: number;
-  event_id: number;
-  user_id: string;
-  guest_count: number;
-  total_amount: number;
-  booking_status: string;
-  payment_status: string;
-  booking_reference: string;
-  special_requests: string;
-  created_at: string;
-  updated_at: string;
-  event_title: string;
-  event_date: string;
-  venue_name: string;
+  showId: Event;
+  userId?: string;
+  guestCount: number;
+  totalAmount?: number;
+  status: string;
+  paymentId?: string;
+  reference?: string | null;
+  note?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  eventTitle?: string;
+  eventDate?: string;
+  venueName?: string;
+  bookingReference?: string;
 }
 
 // Define table columns
@@ -52,13 +57,13 @@ const getBookingColumns = (
     ),
   },
   {
-    key: 'booking_reference',
+    key: 'bookingReference',
     title: 'Reference',
     sortable: true,
     render: (_, record) => (
       <div className="space-y-1">
         <div className="text-sm font-medium text-gray-900 font-mono">
-          {record.booking_reference || `#${record.id}`}
+          {record.bookingReference || `#${record.id}`}
         </div>
         <div className="text-xs text-gray-500">
           ID: {record.id}
@@ -73,21 +78,21 @@ const getBookingColumns = (
     render: (_, record) => (
       <div className="space-y-1">
         <div className="text-sm font-medium text-gray-900">
-          {record.event_title}
+          {record.showId.name || 'Unknown Event'}
         </div>
         <div className="flex items-center text-xs text-gray-500">
           <MapPin className="w-3 h-3 mr-1" />
-          {record.venue_name}
+          {record.showId.venueId.name || 'Unknown Venue'}
         </div>
         <div className="flex items-center text-xs text-gray-500">
           <Calendar className="w-3 h-3 mr-1" />
-          {new Date(record.event_date).toLocaleDateString()}
+          {new Date(record.showId.date || 'Unknown').toLocaleDateString()}
         </div>
       </div>
     ),
   },
   {
-    key: 'user_id',
+    key: 'userId',
     title: 'Customer',
     render: (value) => (
       <div className="text-sm">
@@ -97,7 +102,7 @@ const getBookingColumns = (
     ),
   },
   {
-    key: 'guest_count',
+    key: 'quantity',
     title: 'Guests',
     sortable: true,
     render: (value) => (
@@ -108,7 +113,7 @@ const getBookingColumns = (
     ),
   },
   {
-    key: 'total_amount',
+    key: 'totalAmount',
     title: 'Amount',
     sortable: true,
     render: (value) => (
@@ -121,7 +126,7 @@ const getBookingColumns = (
     ),
   },
   {
-    key: 'booking_status',
+    key: 'status',
     title: 'Booking Status',
     sortable: true,
     render: (value) => {
@@ -146,32 +151,32 @@ const getBookingColumns = (
     },
   },
   {
-    key: 'payment_status',
+    key: 'paymentProviderId',
     title: 'Payment',
     sortable: true,
     render: (value) => {
-      const getPaymentStatusColor = (status: string) => {
-        switch (status) {
-          case 'completed':
-            return 'bg-green-100 text-green-800 border-green-200';
-          case 'pending':
-            return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-          case 'failed':
-            return 'bg-red-100 text-red-800 border-red-200';
-          default:
-            return 'bg-gray-100 text-gray-800 border-gray-200';
-        }
-      };
+      // const getPaymentStatusColor = (status: string) => {
+      //   switch (status) {
+      //     case 'completed':
+      //       return 'bg-green-100 text-green-800 border-green-200';
+      //     case 'pending':
+      //       return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      //     case 'failed':
+      //       return 'bg-red-100 text-red-800 border-red-200';
+      //     default:
+      //       return 'bg-gray-100 text-gray-800 border-gray-200';
+      //   }
+      // };
 
       return (
-        <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full border ${getPaymentStatusColor(value)}`}>
+        <span className={`flex items-center`}>
           {value}
         </span>
       );
     },
   },
   {
-    key: 'created_at',
+    key: 'createdAt',
     title: 'Booked',
     sortable: true,
     render: (value) => (
@@ -193,10 +198,8 @@ const getBookingColumns = (
 ];
 
 export default function BookingsPage() {
-  const [tableState, tableActions] = useServerSideTable({
-    endpoint: '/api/admin/bookings',
-    initialPageSize: 25,
-  });
+  const bookingResult = useBooking({});
+  const [tableState, tableActions] = Array.isArray(bookingResult) ? bookingResult : [ { bookings: [], loading: false, error: null, totalItems: 0, currentPage: 1, pageSize: 25, searchTerm: '', sortConfig: null, filters: {} }, { refresh: async () => {}, setPage: (page: number) => {}, setPageSize: (size: number) => {}, setSearchTerm: (term: string) => {}, setSortConfig: (config: any) => {} } ];  
 
   const [editModal, setEditModal] = useState<{ isOpen: boolean; booking: BookingWithDetails | null }>({
     isOpen: false,
@@ -234,12 +237,12 @@ export default function BookingsPage() {
         const data = await response.json();
         
         // Calculate booking statistics from current data
-        const confirmedCount = tableState.data.filter((b: any) => b.booking_status === 'confirmed').length;
-        const pendingCount = tableState.data.filter((b: any) => b.booking_status === 'pending').length;
-        const cancelledCount = tableState.data.filter((b: any) => b.booking_status === 'cancelled').length;
-        const pendingRevenue = tableState.data
+        const confirmedCount = tableState.bookings.filter((b: any) => b.booking_status === 'confirmed').length;
+        const pendingCount = tableState.bookings.filter((b: any) => b.booking_status === 'pending').length;
+        const cancelledCount = tableState.bookings.filter((b: any) => b.booking_status === 'cancelled').length;
+        const pendingRevenue = tableState.bookings
           .filter((b: any) => b.payment_status === 'pending')
-          .reduce((sum: number, b: any) => sum + (b.total_amount || 0), 0);
+          .reduce((sum: number, b: any) => sum + (b.totalAmount || 0), 0);
 
         setAnalytics({
           totalBookings: data.stats.bookings,
@@ -259,13 +262,13 @@ export default function BookingsPage() {
 
   // Recalculate analytics when table data changes
   useEffect(() => {
-    if (tableState.data.length > 0) {
-      const confirmedCount = tableState.data.filter((b: any) => b.booking_status === 'confirmed').length;
-      const pendingCount = tableState.data.filter((b: any) => b.booking_status === 'pending').length;
-      const cancelledCount = tableState.data.filter((b: any) => b.booking_status === 'cancelled').length;
-      const pendingRevenue = tableState.data
+    if (tableState.bookings.length > 0) {
+      const confirmedCount = tableState.bookings.filter((b: any) => b.booking_status === 'confirmed').length;
+      const pendingCount = tableState.bookings.filter((b: any) => b.booking_status === 'pending').length;
+      const cancelledCount = tableState.bookings.filter((b: any) => b.booking_status === 'cancelled').length;
+      const pendingRevenue = tableState.bookings
         .filter((b: any) => b.payment_status === 'pending')
-        .reduce((sum: number, b: any) => sum + (b.total_amount || 0), 0);
+        .reduce((sum: number, b: any) => sum + (b.totalAmount || 0), 0);
 
       setAnalytics(prev => ({
         ...prev,
@@ -275,13 +278,13 @@ export default function BookingsPage() {
         pendingRevenue,
       }));
     }
-  }, [tableState.data]);
+  }, [tableState.bookings]);
 
   // Reset selection when data changes
   useEffect(() => {
     setSelectedBookings(new Set());
     setSelectAll(false);
-  }, [tableState.data]);
+  }, [tableState.bookings]);
 
   // Handle individual booking selection
   const handleBookingSelect = (bookingId: number, checked: boolean) => {
@@ -299,7 +302,7 @@ export default function BookingsPage() {
   const handleSelectAll = (checked: boolean) => {
     setSelectAll(checked);
     if (checked) {
-      const allIds = new Set(tableState.data.map((b: any) => b.id));
+      const allIds = new Set(tableState.bookings.map((b: any) => b.id));
       setSelectedBookings(allIds);
     } else {
       setSelectedBookings(new Set());
@@ -308,7 +311,7 @@ export default function BookingsPage() {
 
   // Get selected bookings data
   const getSelectedBookingsData = () => {
-    return tableState.data.filter((b: any) => selectedBookings.has(b.id));
+    return tableState.bookings.filter((b: any) => selectedBookings.has(b.id));
   };
 
   // Get selected pending bookings
@@ -579,7 +582,7 @@ export default function BookingsPage() {
 
         {/* Bookings Table */}
         <DataTable
-          data={tableState.data}
+          data={tableState.bookings}
           columns={[
             ...getBookingColumns(selectedBookings, selectAll, handleBookingSelect, handleSelectAll),
             {
@@ -620,23 +623,23 @@ export default function BookingsPage() {
           filters={tableState.filters}
           onPageChange={tableActions.setPage}
           onPageSizeChange={tableActions.setPageSize}
-          onSearchChange={tableActions.setSearch}
-          onSortChange={tableActions.setSort}
-          onFilterChange={tableActions.setFilters}
+          onSearchChange={tableActions.setSearch ?? (() => {})}
+          onSortChange={tableActions.setSort ?? (() => {})}
+          onFilterChange={tableActions.setFilters ?? (() => {})}
           onRefresh={tableActions.refresh}
           onExport={tableActions.exportData}
           searchable={true}
           searchPlaceholder="Search bookings by reference, event, venue..."
           filterOptions={{
-            booking_status: [
+            status: [
               { label: 'Confirmed', value: 'confirmed' },
               { label: 'Pending', value: 'pending' },
               { label: 'Cancelled', value: 'cancelled' }
             ],
-            payment_status: [
-              { label: 'Completed', value: 'completed' },
-              { label: 'Pending', value: 'pending' },
-              { label: 'Failed', value: 'failed' }
+            paymentProviderId: [
+              { label: 'Wallet', value: 'wallet' },
+              { label: 'Paystack', value: 'paystack' },
+              // { label: 'Failed', value: 'failed' }
             ]
           }}
           emptyState={{
@@ -663,7 +666,7 @@ export default function BookingsPage() {
           onConfirm={() => deleteModal.booking && handleDelete(deleteModal.booking)}
           title="Delete Booking"
           message="Are you sure you want to delete this booking? This action cannot be undone."
-          itemName={deleteModal.booking?.booking_reference || `Booking #${deleteModal.booking?.id}` || ''}
+          itemName={deleteModal.booking?.reference || `Booking #${deleteModal.booking?.id}` || ''}
         />
       </div>
     </AdminLayout>

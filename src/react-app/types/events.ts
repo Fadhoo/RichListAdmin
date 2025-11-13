@@ -1,0 +1,45 @@
+import { Venue } from "./venue";
+
+export type Event = {
+	id: string;
+	name: string;
+	desc?: string | null;
+	venueId: string | Venue;
+	promoterId?: string | null;
+	date: string;
+	time?: string | null;
+	duration?: string | null;
+	price?: number | null;
+	totalTickets?: number | null;
+	imageId?: string | null;
+	status: string;
+    type: string;
+    isActive: boolean;
+    typeOfShow: string;
+	isFeatured: boolean;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type CreateEvent = {
+	// id: number;
+	name: string;
+	desc?: string | null;
+	venueId: string;
+	promoterId?: string | null;
+	date: string;
+	time?: string | null;
+	duration?: string | null;
+	price?: number | null;
+	totalTickets?: number | null;
+	imageId?: string | null;
+	status?: string;
+	isFeatured: boolean;
+    type: string;
+    isActive?: boolean;
+    typeOfShow?: string;
+};
+
+export type UpdateEventStatus = {
+	status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+};

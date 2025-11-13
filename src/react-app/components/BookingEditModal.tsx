@@ -1,21 +1,10 @@
+import { AlertCircle, Receipt, Save, X } from "lucide-react";
 import { useState, useEffect } from "react";
-import { X, Save, Receipt, AlertCircle } from "lucide-react";
+import { Booking } from "../types/bookings";
+import { editBooking } from "../api/booking";
 
-interface BookingWithDetails {
-  id: number;
-  event_id: number;
-  user_id: string;
-  guest_count: number;
-  total_amount: number;
-  booking_status: string;
-  payment_status: string;
-  booking_reference: string;
-  special_requests: string;
-  created_at: string;
-  updated_at: string;
-  event_title: string;
-  event_date: string;
-  venue_name: string;
+interface BookingWithDetails extends Booking {
+  id: string;
 }
 
 interface BookingEditModalProps {
@@ -25,12 +14,8 @@ interface BookingEditModalProps {
   onUpdate: () => void;
 }
 
-interface UpdateBookingData {
-  guest_count?: number;
-  booking_status?: string;
-  payment_status?: string;
-  special_requests?: string;
-  total_amount?: number;
+interface UpdateBookingData extends Booking {
+  quantity?: number;
 }
 
 export default function BookingEditModal({
@@ -47,11 +32,10 @@ export default function BookingEditModal({
   useEffect(() => {
     if (booking) {
       const initialData = {
-        guest_count: booking.guest_count,
-        booking_status: booking.booking_status,
-        payment_status: booking.payment_status,
-        special_requests: booking.special_requests || '',
-        total_amount: booking.total_amount || 0,
+        quantity: booking.quantity,
+        status: booking.status,
+        paymentProviderId: booking.paymentProviderId,
+        totalAmount: booking.totalAmount || 0,
       };
       setFormData(initialData);
       setHasChanges(false);
@@ -62,11 +46,10 @@ export default function BookingEditModal({
   useEffect(() => {
     if (booking) {
       const hasChanged = 
-        formData.guest_count !== booking.guest_count ||
-        formData.booking_status !== booking.booking_status ||
-        formData.payment_status !== booking.payment_status ||
-        formData.special_requests !== (booking.special_requests || '') ||
-        formData.total_amount !== (booking.total_amount || 0);
+        formData.quantity !== booking.quantity ||
+        formData.status !== booking.status ||
+        formData.paymentProviderId !== booking.paymentProviderId ||
+        formData.totalAmount !== (booking.totalAmount || 0);
       
       setHasChanges(hasChanged);
     }
@@ -88,33 +71,26 @@ export default function BookingEditModal({
     setErrors({});
 
     // Validation
-    if (!formData.guest_count || formData.guest_count < 1) {
-      setErrors({ guest_count: 'Guest count must be at least 1' });
+    if (!formData.quantity || formData.quantity < 1) {
+      setErrors({ quantity: 'Guest count must be at least 1' });
       setLoading(false);
       return;
     }
 
-    if (formData.total_amount !== undefined && formData.total_amount < 0) {
-      setErrors({ total_amount: 'Total amount cannot be negative' });
+    if (formData.totalAmount !== undefined && formData.totalAmount < 0) {
+      setErrors({ totalAmount: 'Total amount cannot be negative' });
       setLoading(false);
       return;
     }
 
     try {
-      const response = await fetch(`/api/admin/bookings/${booking.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(formData),
-      });
+      const response = await editBooking(booking.id, formData);
 
-      if (response.ok) {
+      if (response.status === 200) {
         onUpdate();
         onClose();
       } else {
-        const error = await response.json();
+        const error = await response.data;
         setErrors({ general: error.error || 'Failed to update booking' });
       }
     } catch (error) {
@@ -138,7 +114,7 @@ export default function BookingEditModal({
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">Edit Booking</h2>
                 <p className="text-sm text-gray-600">
-                  {booking.booking_reference || `#${booking.id}`}
+                  {booking.bookingReference || `#${booking.id}`}
                 </p>
               </div>
             </div>
@@ -175,21 +151,21 @@ export default function BookingEditModal({
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-gray-600">Event:</span>
-                <div className="font-medium">{booking.event_title}</div>
+                <div className="font-medium">{booking.showId.name}</div>
               </div>
               <div>
                 <span className="text-gray-600">Venue:</span>
-                <div className="font-medium">{booking.venue_name}</div>
+                <div className="font-medium">{booking.showId.venueId.name}</div>
               </div>
               <div>
                 <span className="text-gray-600">Event Date:</span>
                 <div className="font-medium">
-                  {new Date(booking.event_date).toLocaleDateString()}
+                  {new Date(booking.createdAt).toLocaleDateString()}
                 </div>
               </div>
               <div>
-                <span className="text-gray-600">Customer ID:</span>
-                <div className="font-mono text-xs">{booking.user_id}</div>
+                <span className="text-gray-600">Customer Username:</span>
+                <div className="font-mono text-xs">{booking.userId}</div>
               </div>
             </div>
           </div>
@@ -200,26 +176,20 @@ export default function BookingEditModal({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${
-                  booking.booking_status === 'confirmed' 
+                  booking.status === 'confirmed' 
                     ? 'bg-green-100 text-green-800' 
-                    : booking.booking_status === 'pending'
+                    : booking.status === 'pending'
                     ? 'bg-yellow-100 text-yellow-800'
                     : 'bg-red-100 text-red-800'
                 }`}>
-                  {booking.booking_status}
+                  {booking.status}
                 </span>
-                <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${
-                  booking.payment_status === 'completed'
-                    ? 'bg-green-100 text-green-800'
-                    : booking.payment_status === 'pending'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  Payment: {booking.payment_status}
+                <span className={``}>
+                  Payment: {booking.paymentProviderId}
                 </span>
               </div>
               <div className="text-sm text-gray-600">
-                Booked: {new Date(booking.created_at).toLocaleDateString()}
+                Booked: {new Date(booking.createdAt).toLocaleDateString()}
               </div>
             </div>
           </div>
@@ -234,19 +204,19 @@ export default function BookingEditModal({
                 <input
                   type="number"
                   min="1"
-                  value={formData.guest_count || ''}
-                  onChange={(e) => handleInputChange('guest_count', parseInt(e.target.value) || 1)}
+                  value={formData.quantity || ''}
+                  onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 1)}
                   className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                    errors.guest_count ? 'border-red-300' : 'border-gray-300'
+                    errors.quantity ? 'border-red-300' : 'border-gray-300'
                   }`}
                   disabled={loading}
                 />
-                {errors.guest_count && (
-                  <p className="text-red-600 text-sm mt-1">{errors.guest_count}</p>
+                {errors.quantity && (
+                  <p className="text-red-600 text-sm mt-1">{errors.quantity}</p>
                 )}
               </div>
 
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Total Amount ($)
                 </label>
@@ -254,17 +224,17 @@ export default function BookingEditModal({
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.total_amount || ''}
-                  onChange={(e) => handleInputChange('total_amount', parseFloat(e.target.value) || 0)}
+                  value={formData.totalAmount || ''}
+                  onChange={(e) => handleInputChange('totalAmount', parseFloat(e.target.value) || 0)}
                   className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                    errors.total_amount ? 'border-red-300' : 'border-gray-300'
+                    errors.totalAmount ? 'border-red-300' : 'border-gray-300'
                   }`}
                   disabled={loading}
                 />
-                {errors.total_amount && (
-                  <p className="text-red-600 text-sm mt-1">{errors.total_amount}</p>
+                {errors.totalAmount && (
+                  <p className="text-red-600 text-sm mt-1">{errors.totalAmount}</p>
                 )}
-              </div>
+              </div> */}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -273,8 +243,8 @@ export default function BookingEditModal({
                   Booking Status
                 </label>
                 <select
-                  value={formData.booking_status || booking.booking_status}
-                  onChange={(e) => handleInputChange('booking_status', e.target.value)}
+                  value={formData.status || booking.status}
+                  onChange={(e) => handleInputChange('status', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   disabled={loading}
                 >
@@ -284,13 +254,13 @@ export default function BookingEditModal({
                 </select>
               </div>
 
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Payment Status
                 </label>
                 <select
-                  value={formData.payment_status || booking.payment_status}
-                  onChange={(e) => handleInputChange('payment_status', e.target.value)}
+                  value={formData.paymentProviderId || booking.paymentProviderId}
+                  onChange={(e) => handleInputChange('paymentProviderId', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   disabled={loading}
                 >
@@ -298,21 +268,7 @@ export default function BookingEditModal({
                   <option value="completed">Completed</option>
                   <option value="failed">Failed</option>
                 </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Special Requests
-              </label>
-              <textarea
-                value={formData.special_requests || ''}
-                onChange={(e) => handleInputChange('special_requests', e.target.value)}
-                rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Any special requests or notes..."
-                disabled={loading}
-              />
+              </div> */}
             </div>
           </div>
 

@@ -4,9 +4,10 @@ import DeleteConfirmModal from "@/react-app/components/DeleteConfirmModal";
 import VenueEditModal from "@/react-app/components/VenueEditModal";
 import VenueProductsModal from "@/react-app/components/VenueProductsModal";
 import DataTable, { TableColumn } from "@/react-app/components/DataTable";
-import { useServerSideTable } from "@/react-app/hooks/useServerSideTable";
+import { createVenue, deleteVenue } from "../api/venues";
+import { useVenues } from "@/react-app/hooks/useVenues";
 import { Plus, MapPin, Users, Phone, Mail, Trash2, Edit, Wine } from "lucide-react";
-import type { Venue, CreateVenue } from "@/shared/types";
+import type { Venue, CreateVenue } from "../types/venue";
 import ImageUpload from "@/react-app/components/ImageUpload";
 
 // Define table columns
@@ -17,9 +18,9 @@ const venueColumns: TableColumn<Venue>[] = [
     sortable: true,
     render: (_, record) => (
       <div className="flex items-center space-x-3">
-        {record.image_url ? (
+        {record.imageId ? (
           <img
-            src={record.image_url}
+            src={record.imageId}
             alt={record.name}
             className="w-12 h-12 object-cover rounded-lg"
             onError={(e) => {
@@ -33,9 +34,9 @@ const venueColumns: TableColumn<Venue>[] = [
         )}
         <div>
           <div className="font-medium text-gray-900">{record.name}</div>
-          {record.description && (
+          {record.desc && (
             <div className="text-sm text-gray-500 truncate max-w-xs">
-              {record.description}
+              {record.desc}
             </div>
           )}
         </div>
@@ -48,9 +49,9 @@ const venueColumns: TableColumn<Venue>[] = [
     sortable: true,
     render: (_, record) => (
       <div className="text-sm">
-        <div className="text-gray-900">{record.city || 'N/A'}</div>
-        {record.address && (
-          <div className="text-gray-500 truncate max-w-xs">{record.address}</div>
+        <div className="text-gray-900">{record.city || 'Lagos'}</div>
+        {record.location && (
+          <div className="text-gray-500 truncate max-w-xs">{record.location}</div>
         )}
       </div>
     ),
@@ -97,23 +98,23 @@ const venueColumns: TableColumn<Venue>[] = [
     ),
   },
   {
-    key: 'is_verified',
-    title: 'Status',
+    key: 'isActive',
+    title: 'Active Status',
     sortable: true,
-    render: (isVerified) => (
+    render: (isActive) => (
       <span
         className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-          isVerified
+          isActive
             ? 'bg-green-100 text-green-800'
             : 'bg-yellow-100 text-yellow-800'
         }`}
       >
-        {isVerified ? 'Verified' : 'Pending'}
+        {isActive ? 'Active' : 'Inactive'}
       </span>
     ),
   },
   {
-    key: 'created_at',
+    key: 'createdAt',
     title: 'Created',
     sortable: true,
     render: (createdAt) => new Date(createdAt).toLocaleDateString(),
@@ -121,10 +122,9 @@ const venueColumns: TableColumn<Venue>[] = [
 ];
 
 export default function VenuesPage() {
-  const [tableState, tableActions] = useServerSideTable({
-    endpoint: '/api/admin/venues',
-    initialPageSize: 25,
-  });
+  const venuesResult = useVenues({});
+  const [tableState, tableActions] = Array.isArray(venuesResult) ? venuesResult : [{ data: [], loading: true, totalItems: 0, currentPage: 1, pageSize: 10, searchTerm: '', sortConfig: {}, filters: {} }, {}];
+  const refresh = tableActions.refresh;
 
   const [showForm, setShowForm] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; venue: Venue | null }>({
@@ -141,39 +141,33 @@ export default function VenuesPage() {
   });
   const [formData, setFormData] = useState<CreateVenue>({
     name: '',
-    description: '',
-    address: '',
+    desc: '',
+    location: '',
     city: '',
     phone: '',
     email: '',
-    image_url: '',
+    imageId: '',
     capacity: undefined,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/admin/venues', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(formData),
-      });
 
-      if (response.ok) {
-        await response.json();
-        tableActions.refresh(); // Refresh the table data
+      const response = await createVenue(formData);
+
+      if (response.status === 200) {
+        await response.data.  json();
+        refresh(); // Refresh the table data
         setShowForm(false);
         setFormData({
           name: '',
-          description: '',
-          address: '',
+          desc: '',
+          location: '',
           city: '',
           phone: '',
           email: '',
-          image_url: '',
+          imageId: '',
           capacity: undefined,
         });
       }
@@ -189,12 +183,8 @@ export default function VenuesPage() {
 
   const handleDelete = async (venue: Venue) => {
     try {
-      const response = await fetch(`/api/admin/venues/${venue.id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-
-      if (response.ok) {
+      const response = await deleteVenue(venue.id.toString());
+      if (response.status === 200) {
         tableActions.refresh(); // Refresh the table data
         setDeleteModal({ isOpen: false, venue: null });
       }
@@ -262,8 +252,8 @@ export default function VenuesPage() {
                 </label>
                 <input
                   type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="Enter full address"
                 />
@@ -274,8 +264,8 @@ export default function VenuesPage() {
                   Description
                 </label>
                 <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  value={formData.desc}
+                  onChange={(e) => setFormData({ ...formData, desc: e.target.value })}
                   rows={3}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="Describe the venue..."
@@ -326,8 +316,8 @@ export default function VenuesPage() {
                   Venue Image
                 </label>
                 <ImageUpload
-                  onUpload={(url) => setFormData({ ...formData, image_url: url })}
-                  currentImage={formData.image_url}
+                  onUpload={(url) => setFormData({ ...formData, imageId: url })}
+                  currentImage={formData.imageId}
                   maxSizeMB={10}
                 />
               </div>
@@ -353,7 +343,7 @@ export default function VenuesPage() {
 
         {/* Venues Table */}
         <DataTable
-          data={tableState.data}
+          data={venuesResult[0]?.venues || []} // ensures data is always an array
           columns={[
             ...venueColumns,
             {
@@ -391,13 +381,13 @@ export default function VenuesPage() {
           currentPage={tableState.currentPage}
           pageSize={tableState.pageSize}
           searchTerm={tableState.searchTerm}
-          sortConfig={tableState.sortConfig}
+          sortConfig={tableState.sortConfig as { key: string; direction: 'asc' | 'desc' } | null}
           filters={tableState.filters}
-          onPageChange={tableActions.setPage}
-          onPageSizeChange={tableActions.setPageSize}
-          onSearchChange={tableActions.setSearch}
-          onSortChange={tableActions.setSort}
-          onFilterChange={tableActions.setFilters}
+          onPageChange={tableActions.setPage ?? (() => {})}
+          onPageSizeChange={tableActions.setPageSize ?? (() => {})}
+          onSearchChange={tableActions.setSearch ?? (() => {})}
+          onSortChange={tableActions.setSort ?? (() => {})}
+          onFilterChange={tableActions.setFilters ?? (() => {})}
           onRefresh={tableActions.refresh}
           onExport={tableActions.exportData}
           searchable={true}

@@ -1,34 +1,27 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { Venue } from "../types/venue";
+import type { Category } from "../types/categories";
 import { useState, useEffect } from "react";
 import { X, Save, Plus, Trash2, Wine, Coffee, Cigarette, GlassWater, UtensilsCrossed, Sparkles, Crown, Music } from "lucide-react";
-import type { Venue } from "@/shared/types";
+import { fetchProducts, updateProductsInBulk } from "../api/products";
+import { fetchCategorys } from "../api/categories";
+import { Product } from "../types/products";
 
-interface VenueProduct {
-  id?: number;
-  venue_id: number;
+interface VenueProduct extends Product {
+  id: string;
+  venueId: string;
   name: string;
-  category: string;
-  subcategory?: string;
-  price?: number;
-  currency: string;
-  description?: string;
-  image_url?: string;
-  is_available: boolean;
-  is_featured: boolean;
-  minimum_order: number;
-  serving_size?: string;
-  alcohol_content?: number;
-  flavor_profile?: string;
-  brand?: string;
-  origin_country?: string;
-  preparation_time_minutes?: number;
-  ingredients?: string;
-  dietary_restrictions?: string;
+  categoryId: Category;
+  price: number;
+  desc: string;
+  imageId?: string;
+  isActive: boolean;
+  isFeatured?: boolean;
 }
 
 interface ProductCategory {
   name: string;
-  display_name: string;
-  description: string;
+  desc: string;
   icon_name: string;
   color_code: string;
 }
@@ -51,16 +44,25 @@ const categoryIcons: Record<string, any> = {
   Music,
 };
 
-const defaultProduct: Omit<VenueProduct, 'venue_id'> = {
+const defaultProduct: Omit<VenueProduct, 'venueId'> = {
+  id: '',
   name: '',
-  category: 'alcoholic_beverages',
+  categoryId: {
+    id: '',
+    name: '',
+    desc: '',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
   price: 0,
-  currency: 'NGN',
-  description: '',
-  image_url: '',
-  is_available: true,
-  is_featured: false,
-  minimum_order: 1,
+  desc: '',
+  tags: [],
+  brand: '',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  imageId: '',
+  isActive: true,
+  isFeatured: false,
 };
 
 export default function VenueProductsModal({
@@ -78,21 +80,20 @@ export default function VenueProductsModal({
 
   useEffect(() => {
     if (isOpen && venue) {
-      fetchProducts();
-      fetchCategories();
+      fetchAllProducts();
+      fetchAllCategories();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, venue]);
 
-  const fetchProducts = async () => {
+  const fetchAllProducts = async () => {
     if (!venue) return;
     
     setLoading(true);
     try {
-      const response = await fetch(`/api/admin/venues/${venue.id}/products`, {
-        credentials: 'include',
-      });
-      if (response.ok) {
-        const data = await response.json();
+      const response = await fetchProducts(1, 100, undefined, undefined, venue.id.toString());
+      if (response.status === 200) {
+        const data = response.data.results;
         setProducts(data);
       }
     } catch (error) {
@@ -102,14 +103,20 @@ export default function VenueProductsModal({
     }
   };
 
-  const fetchCategories = async () => {
+  const fetchAllCategories = async () => {
     try {
-      const response = await fetch('/api/admin/venue-product-categories', {
-        credentials: 'include',
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setCategories(data);
+      const response = await fetchCategorys(1,30, venue ? venue.id.toString() : '' );
+      if (response.status === 200) {
+        const data = response.data.results;
+        console.log(data, response.data);
+        setCategories(
+          data.map((cat: Category) => ({
+            name: cat.name,
+            desc: cat.desc,
+            icon_name: (cat as any).icon_name || "Wine",
+            color_code: (cat as any).color_code || "#8B5CF6",
+          }))
+        ); // Default color if not provided
       }
     } catch (error) {
       console.error('Failed to fetch categories:', error);
@@ -121,7 +128,7 @@ export default function VenueProductsModal({
     
     const newProduct: VenueProduct = {
       ...defaultProduct,
-      venue_id: venue.id,
+      venueId: venue.id,
     };
     setProducts([...products, newProduct]);
   };
@@ -148,20 +155,30 @@ export default function VenueProductsModal({
     setErrors({});
 
     try {
-      const response = await fetch(`/api/admin/venues/${venue.id}/products`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
+      // Expecting an array of { productId, updateBody }
+      const productsToUpdate = products.map((product) => ({
+        productId: product.id,
+        updateBody: {
+          name: product.name,
+          categoryId: product.categoryId.id,
+          price: product.price,
+          desc: product.desc,
+          imageId: product.imageId,
+          isActive: product.isActive,
+          isFeatured: product.isFeatured,
+          brand: product.brand,
+          // serving_size: product.serving_size,
+          // alcohol_content: product.alcohol_content,
+          // flavor_profile: product.flavor_profile,
         },
-        credentials: 'include',
-        body: JSON.stringify({ products }),
-      });
+      }));
+      const response = await updateProductsInBulk(productsToUpdate, venue.id.toString());
 
-      if (response.ok) {
+      if (response.status === 200 ) {
         onUpdate();
         onClose();
       } else {
-        const error = await response.json();
+        const error = await response.data.json();
         setErrors({ general: error.error || 'Failed to update products' });
       }
     } catch (error) {
@@ -176,7 +193,7 @@ export default function VenueProductsModal({
 
   const filteredProducts = activeCategory === 'all' 
     ? products 
-    : products.filter(p => p.category === activeCategory);
+    : products.filter(p => p.categoryId.name === activeCategory);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -218,7 +235,7 @@ export default function VenueProductsModal({
             </button>
             {categories.map((category) => {
               const Icon = categoryIcons[category.icon_name] || Wine;
-              const count = products.filter(p => p.category === category.name).length;
+              const count = products.filter(p => p.categoryId.name === category.name).length;
               return (
                 <button
                   key={category.name}
@@ -233,7 +250,7 @@ export default function VenueProductsModal({
                   }}
                 >
                   <Icon className="w-4 h-4" />
-                  <span>{category.display_name} ({count})</span>
+                  <span>{category.name} ({count})</span>
                 </button>
               );
             })}
@@ -259,7 +276,7 @@ export default function VenueProductsModal({
                   <div className="text-center py-12">
                     <Wine className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      {activeCategory === 'all' ? 'No products added yet' : `No ${categories.find(c => c.name === activeCategory)?.display_name.toLowerCase()} added yet`}
+                      {activeCategory === 'all' ? 'No products added yet' : `No ${categories.find(c => c.name === activeCategory)?.name.toLowerCase()} added yet`}
                     </h3>
                     <p className="text-gray-600 mb-6">
                       Add products to showcase what your venue offers
@@ -295,7 +312,7 @@ export default function VenueProductsModal({
                                   {product.name || 'New Product'}
                                 </h4>
                                 <p className="text-sm text-gray-500">
-                                  {category?.display_name || 'Select Category'}
+                                  {category?.name || 'Select Category'}
                                 </p>
                               </div>
                             </div>
@@ -335,7 +352,7 @@ export default function VenueProductsModal({
                               >
                                 {categories.map((cat) => (
                                   <option key={cat.name} value={cat.name}>
-                                    {cat.display_name}
+                                    {cat.name}
                                   </option>
                                 ))}
                               </select>
@@ -405,8 +422,8 @@ export default function VenueProductsModal({
                                 Description
                               </label>
                               <textarea
-                                value={product.description || ''}
-                                onChange={(e) => updateProduct(actualIndex, 'description', e.target.value)}
+                                value={product.desc || ''}
+                                onChange={(e) => updateProduct(actualIndex, 'desc', e.target.value)}
                                 rows={3}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 placeholder="Describe the product..."
@@ -431,8 +448,8 @@ export default function VenueProductsModal({
                             <label className="flex items-center space-x-2">
                               <input
                                 type="checkbox"
-                                checked={product.is_available}
-                                onChange={(e) => updateProduct(actualIndex, 'is_available', e.target.checked)}
+                                checked={product.isActive}
+                                onChange={(e) => updateProduct(actualIndex, 'isActive', e.target.checked)}
                                 className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                               />
                               <span className="text-sm text-gray-700">Available</span>
@@ -441,8 +458,8 @@ export default function VenueProductsModal({
                             <label className="flex items-center space-x-2">
                               <input
                                 type="checkbox"
-                                checked={product.is_featured}
-                                onChange={(e) => updateProduct(actualIndex, 'is_featured', e.target.checked)}
+                                checked={product.isFeatured}
+                                onChange={(e) => updateProduct(actualIndex, 'isFeatured', e.target.checked)}
                                 className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                               />
                               <span className="text-sm text-gray-700">Featured</span>

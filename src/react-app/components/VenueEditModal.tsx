@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, Save, MapPin } from "lucide-react";
-import type { Venue, CreateVenue } from "@/shared/types";
+import { editVenue } from "@/react-app/api/venues";
+import type { Venue, CreateVenue } from "../types/venue";
 import ImageUpload from "@/react-app/components/ImageUpload";
 
 interface VenueEditModalProps {
@@ -18,13 +19,14 @@ export default function VenueEditModal({
 }: VenueEditModalProps) {
   const [formData, setFormData] = useState<CreateVenue>({
     name: '',
-    description: '',
-    address: '',
+    desc: '',
+    location: '',
     city: '',
     phone: '',
     email: '',
-    image_url: '',
+    imageId: '',
     capacity: undefined,
+    isActive: null,
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -33,13 +35,14 @@ export default function VenueEditModal({
     if (venue) {
       setFormData({
         name: venue.name,
-        description: venue.description || '',
-        address: venue.address || '',
+        desc: venue.desc || '',
+        location: venue.location || '',
         city: venue.city || '',
         phone: venue.phone || '',
         email: venue.email || '',
-        image_url: venue.image_url || '',
+        imageId: venue.imageId || '',
         capacity: venue.capacity || undefined,
+        isActive: venue.isActive,
       });
     }
   }, [venue]);
@@ -52,20 +55,13 @@ export default function VenueEditModal({
     setErrors({});
 
     try {
-      const response = await fetch(`/api/admin/venues/${venue.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(formData),
-      });
+      const response = await editVenue(venue.id.toString(), formData);
 
-      if (response.ok) {
+      if (response.status === 200) {
         onUpdate();
         onClose();
       } else {
-        const error = await response.json();
+        const error = await response.data.json();
         setErrors({ general: error.error || 'Failed to update venue' });
       }
     } catch (error) {
@@ -140,8 +136,8 @@ export default function VenueEditModal({
             </label>
             <input
               type="text"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              value={formData.location}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="Enter full address"
               disabled={loading}
@@ -153,8 +149,8 @@ export default function VenueEditModal({
               Description
             </label>
             <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              value={formData.desc}
+              onChange={(e) => setFormData({ ...formData, desc: e.target.value })}
               rows={3}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="Describe the venue..."
@@ -164,17 +160,35 @@ export default function VenueEditModal({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Phone
+             <label className="block text-sm font-medium text-gray-700 mb-2">
+                Active
               </label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Phone number"
-                disabled={loading}
-              />
+              <div className="flex items-center space-x-4">
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="isActive"
+                    value="true"
+                    checked={formData.isActive === true}
+                    onChange={() => setFormData({ ...formData, isActive: true })}
+                    className="form-radio text-purple-600"
+                    disabled={loading}
+                  />
+                  <span className="ml-2">Active</span>
+                </label>
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="isActive"
+                    value="false"
+                    checked={formData.isActive === false}
+                    onChange={() => setFormData({ ...formData, isActive: false })}
+                    className="form-radio text-purple-600"
+                    disabled={loading}
+                  />
+                  <span className="ml-2">Inactive</span>
+                </label>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -209,8 +223,8 @@ export default function VenueEditModal({
               Venue Image
             </label>
             <ImageUpload
-              onUpload={(url) => setFormData({ ...formData, image_url: url })}
-              currentImage={formData.image_url}
+              onUpload={(url) => setFormData({ ...formData, imageId: url })}
+              currentImage={formData.imageId}
               maxSizeMB={10}
             />
           </div>
