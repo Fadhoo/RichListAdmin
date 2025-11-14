@@ -45,14 +45,14 @@ export const fetchProducts = async (
 };
 
 // an array of { productId, updateBody }
-export const updateProductsInBulk = async ([ updateBody
-]: { productId: string; updateBody: Partial<CreateProductBody> }[], venueId: string
+export const updateProductsInBulk = async (productsToUpdate: { productId: string; updateBody: Partial<CreateProductBody> }[], venueId: string
 ) => {
   const url = `/v1/products/bulk-update`;
   try {
+    console.log("Updating products in bulk:", { venueId, updateBody: productsToUpdate, });
     const response = await axiosInstance().patch(url, { 
       venueId,
-      updateBody,
+      updateBody: productsToUpdate,
     });
     
     return response;

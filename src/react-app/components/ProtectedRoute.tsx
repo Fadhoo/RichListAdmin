@@ -1,4 +1,3 @@
-import { useAuth } from "@getmocha/users-service/react";
 import { Navigate } from "react-router";
 import LoadingSpinner from "./LoadingSpinner";
 

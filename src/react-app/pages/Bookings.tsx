@@ -4,35 +4,17 @@ import AdminLayout from "@/react-app/components/AdminLayout";
 import BookingEditModal from "@/react-app/components/BookingEditModal";
 import DeleteConfirmModal from "@/react-app/components/DeleteConfirmModal";
 import DataTable, { TableColumn } from "@/react-app/components/DataTable";
-import { editBooking } from "../api/booking";
+// import { editBooking } from "../api/booking";
 import { Calendar, MapPin, Users, DollarSign, Receipt, Edit, Trash2, TrendingUp, AlertCircle, Check, X } from "lucide-react";
 import { useBooking } from "../hooks/useBooking";
-import { Event } from "../types/events";
-// import { Booking } from "../types/bookings";
 
-interface BookingWithDetails {
-  id: number;
-  showId: Event;
-  userId?: string;
-  guestCount: number;
-  totalAmount?: number;
-  status: string;
-  paymentId?: string;
-  reference?: string | null;
-  note?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  eventTitle?: string;
-  eventDate?: string;
-  venueName?: string;
-  bookingReference?: string;
-}
+import { BookingWithDetails } from "@/react-app/types/bookings";
 
 // Define table columns
 const getBookingColumns = (
-  selectedBookings: Set<number>,
+  selectedBookings: Set<string>,
   selectAll: boolean,
-  onBookingSelect: (id: number, checked: boolean) => void,
+  onBookingSelect: (id: string, checked: boolean) => void,
   onSelectAll: (checked: boolean) => void
 ): TableColumn<BookingWithDetails>[] => [
   {
@@ -49,8 +31,8 @@ const getBookingColumns = (
     render: (_, record) => (
       <input
         type="checkbox"
-        checked={selectedBookings.has(record.id)}
-        onChange={(e) => onBookingSelect(record.id, e.target.checked)}
+        checked={selectedBookings.has(record.id ?? '')}
+        onChange={(e) => onBookingSelect(record.id ?? '', e.target.checked)}
         className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
         onClick={(e) => e.stopPropagation()}
       />
@@ -82,7 +64,11 @@ const getBookingColumns = (
         </div>
         <div className="flex items-center text-xs text-gray-500">
           <MapPin className="w-3 h-3 mr-1" />
-          {record.showId.venueId.name || 'Unknown Venue'}
+          {typeof record.showId.venueId === 'object' && record.showId.venueId !== null
+            ? record.showId.venueId.name
+            : typeof record.showId.venueId === 'string'
+              ? record.showId.venueId
+              : 'Unknown Venue'}
         </div>
         <div className="flex items-center text-xs text-gray-500">
           <Calendar className="w-3 h-3 mr-1" />
@@ -199,7 +185,7 @@ const getBookingColumns = (
 
 export default function BookingsPage() {
   const bookingResult = useBooking({});
-  const [tableState, tableActions] = Array.isArray(bookingResult) ? bookingResult : [ { bookings: [], loading: false, error: null, totalItems: 0, currentPage: 1, pageSize: 25, searchTerm: '', sortConfig: null, filters: {} }, { refresh: async () => {}, setPage: (page: number) => {}, setPageSize: (size: number) => {}, setSearchTerm: (term: string) => {}, setSortConfig: (config: any) => {} } ];  
+  const [tableState, tableActions] = Array.isArray(bookingResult) ? bookingResult : [ { bookings: [], loading: false, error: null, totalItems: 0, currentPage: 1, pageSize: 25, searchTerm: '', sortConfig: null, filters: {} }, { refresh: async () => {}} ];  
 
   const [editModal, setEditModal] = useState<{ isOpen: boolean; booking: BookingWithDetails | null }>({
     isOpen: false,
@@ -211,7 +197,7 @@ export default function BookingsPage() {
   });
 
   // Selection state for bulk operations
-  const [selectedBookings, setSelectedBookings] = useState<Set<number>>(new Set());
+  const [selectedBookings, setSelectedBookings] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
 
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
@@ -287,7 +273,7 @@ export default function BookingsPage() {
   }, [tableState.bookings]);
 
   // Handle individual booking selection
-  const handleBookingSelect = (bookingId: number, checked: boolean) => {
+  const handleBookingSelect = (bookingId: string, checked: boolean) => {
     const newSelected = new Set(selectedBookings);
     if (checked) {
       newSelected.add(bookingId);
@@ -582,7 +568,10 @@ export default function BookingsPage() {
 
         {/* Bookings Table */}
         <DataTable
-          data={tableState.bookings}
+          data={tableState.bookings.map((b: any) => ({
+            ...b,
+            id: typeof b.id === 'string' ? parseInt(b.id, 10) : b.id ?? 0
+          }))}
           columns={[
             ...getBookingColumns(selectedBookings, selectAll, handleBookingSelect, handleSelectAll),
             {
@@ -621,8 +610,8 @@ export default function BookingsPage() {
           searchTerm={tableState.searchTerm}
           sortConfig={tableState.sortConfig}
           filters={tableState.filters}
-          onPageChange={tableActions.setPage}
-          onPageSizeChange={tableActions.setPageSize}
+          onPageChange={tableActions.setPage ?? (() => {})}
+          onPageSizeChange={tableActions.setPageSize ?? (() => {})}
           onSearchChange={tableActions.setSearch ?? (() => {})}
           onSortChange={tableActions.setSort ?? (() => {})}
           onFilterChange={tableActions.setFilters ?? (() => {})}
@@ -666,7 +655,7 @@ export default function BookingsPage() {
           onConfirm={() => deleteModal.booking && handleDelete(deleteModal.booking)}
           title="Delete Booking"
           message="Are you sure you want to delete this booking? This action cannot be undone."
-          itemName={deleteModal.booking?.reference || `Booking #${deleteModal.booking?.id}` || ''}
+          itemName={deleteModal.booking?.bookingReference || `Booking #${deleteModal.booking?.id}` || ''}
         />
       </div>
     </AdminLayout>

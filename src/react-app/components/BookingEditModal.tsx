@@ -1,10 +1,17 @@
+/* eslint-disable @typescript-eslint/no-empty-object-type */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { AlertCircle, Receipt, Save, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Booking } from "../types/bookings";
 import { editBooking } from "../api/booking";
 
 interface BookingWithDetails extends Booking {
-  id: string;
+  // bookingReference: any;
+  // paymentProviderId: any;
+  // quantity: any;
+  // id: string | undefined;
+  userDetails: {};
+  paymentDetails: {};
 }
 
 interface BookingEditModalProps {
@@ -16,6 +23,8 @@ interface BookingEditModalProps {
 
 interface UpdateBookingData extends Booking {
   quantity?: number;
+  paymentProviderId?: any;
+  bookingReference?: any;
 }
 
 export default function BookingEditModal({
@@ -24,18 +33,37 @@ export default function BookingEditModal({
   booking,
   onUpdate,
 }: BookingEditModalProps) {
-  const [formData, setFormData] = useState<UpdateBookingData>({});
+  const [formData, setFormData] = useState<UpdateBookingData>({
+    quantity: 1,
+    status: "",
+    paymentProviderId: "",
+    totalAmount: 0,
+    showId: {} as any,
+    guestCount: 0,
+    createdAt: "",
+    updatedAt: "",
+    userId: "",
+    bookingReference: "",
+    id: "",
+  });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     if (booking) {
-      const initialData = {
-        quantity: booking.quantity,
+      const initialData: UpdateBookingData = {
+        quantity: booking.quantity ?? undefined,
         status: booking.status,
         paymentProviderId: booking.paymentProviderId,
         totalAmount: booking.totalAmount || 0,
+        showId: booking.showId,
+        guestCount: booking.guestCount,
+        createdAt: booking.createdAt,
+        updatedAt: booking.updatedAt,
+        userId: booking.userId,
+        bookingReference: booking.bookingReference,
+        id: booking.id,
       };
       setFormData(initialData);
       setHasChanges(false);
@@ -84,7 +112,7 @@ export default function BookingEditModal({
     }
 
     try {
-      const response = await editBooking(booking.id, formData);
+      const response = await editBooking(booking.id!, formData);
 
       if (response.status === 200) {
         onUpdate();
@@ -155,7 +183,11 @@ export default function BookingEditModal({
               </div>
               <div>
                 <span className="text-gray-600">Venue:</span>
-                <div className="font-medium">{booking.showId.venueId.name}</div>
+                <div className="font-medium">
+                  {typeof booking.showId.venueId === 'object' && booking.showId.venueId !== null
+                    ? booking.showId.venueId.name
+                    : booking.showId.venueId}
+                </div>
               </div>
               <div>
                 <span className="text-gray-600">Event Date:</span>

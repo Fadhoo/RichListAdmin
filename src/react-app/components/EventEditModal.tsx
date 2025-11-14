@@ -47,7 +47,7 @@ export default function EventEditModal({
       setFormData({
         name: event.name,
         desc: event.desc || '',
-        venueId: event.venueId,
+        venueId: typeof event.venueId === 'string' ? event.venueId : String(event.venueId.id),
         date: event.date.split('T')[0], // Convert to YYYY-MM-DD format
         time: event.time || '',
         duration: event.duration || '',
@@ -181,7 +181,7 @@ export default function EventEditModal({
               Description
             </label>
             <textarea
-              value={formData.desc}
+              value={formData.desc ?? ''}
               onChange={(e) => setFormData({ ...formData, desc: e.target.value })}
               rows={3}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -213,7 +213,7 @@ export default function EventEditModal({
               </label>
               <input
                 type="time"
-                value={formData.time}
+                value={formData.time ?? ''}
                 onChange={(e) => setFormData({ ...formData, time: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 disabled={loading}

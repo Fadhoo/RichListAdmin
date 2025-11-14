@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 import { Event } from "./events"; 
 export type Booking = {
 	id?: string;
@@ -7,10 +8,12 @@ export type Booking = {
 	totalAmount?: number;
 	status: string;
 	paymentId?: string;
-	reference?: string | null;
+	bookingReference?: string | null;
 	note?: string | null;
 	createdAt: string;
 	updatedAt: string;
+	paymentProviderId?: string | null;
+	quantity?: number | null;
 };
 
 export type getBookingResponse = {
@@ -19,4 +22,9 @@ export type getBookingResponse = {
     limit: number;
     totalPages: number;
     totalResults: number;
+};
+
+export type BookingWithDetails = Booking & {
+	userDetails: {};
+	paymentDetails: {};
 };

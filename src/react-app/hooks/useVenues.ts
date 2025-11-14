@@ -35,7 +35,6 @@ export interface ServerSideVenueUpdate {
 }
 
 interface UseServerSideVenuesOptions {
-  endpoint: string;
   initialPageSize?: number;
   initialFilters?: Record<string, string>;
   autoFetch?: boolean;

@@ -108,7 +108,6 @@ export default function VenueProductsModal({
       const response = await fetchCategorys(1,30, venue ? venue.id.toString() : '' );
       if (response.status === 200) {
         const data = response.data.results;
-        console.log(data, response.data);
         setCategories(
           data.map((cat: Category) => ({
             name: cat.name,
@@ -117,6 +116,7 @@ export default function VenueProductsModal({
             color_code: (cat as any).color_code || "#8B5CF6",
           }))
         ); // Default color if not provided
+
       }
     } catch (error) {
       console.error('Failed to fetch categories:', error);
@@ -294,7 +294,7 @@ export default function VenueProductsModal({
                   <div className="space-y-6">
                     {filteredProducts.map((product) => {
                       const actualIndex = products.findIndex(p => p === product);
-                      const category = categories.find(c => c.name === product.category);
+                      const category = categories.find(c => c.name === product.categoryId.name);
                       const Icon = category ? categoryIcons[category.icon_name] || Wine : Wine;
                       
                       return (
@@ -346,8 +346,18 @@ export default function VenueProductsModal({
                               </label>
                               <select
                                 required
-                                value={product.category}
-                                onChange={(e) => updateProduct(actualIndex, 'category', e.target.value)}
+                                value={product.categoryId.name}
+                                onChange={(e) => {
+                                  const selectedCategory = categories.find(cat => cat.name === e.target.value);
+                                  if (selectedCategory) {
+                                    updateProduct(actualIndex, 'categoryId', {
+                                      ...product.categoryId,
+                                      name: selectedCategory.name,
+                                      desc: selectedCategory.desc,
+                                      // Optionally update icon_name and color_code if needed
+                                    });
+                                  }
+                                }}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                               >
                                 {categories.map((cat) => (
@@ -386,36 +396,7 @@ export default function VenueProductsModal({
                               />
                             </div>
 
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Serving Size
-                              </label>
-                              <input
-                                type="text"
-                                value={product.serving_size || ''}
-                                onChange={(e) => updateProduct(actualIndex, 'serving_size', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                placeholder="e.g., 700ml, Single, Double"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Alcohol Content (%)
-                              </label>
-                              <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                step="0.1"
-                                value={product.alcohol_content || ''}
-                                onChange={(e) => updateProduct(actualIndex, 'alcohol_content', parseFloat(e.target.value) || undefined)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                placeholder="e.g., 40"
-                              />
-                            </div>
                           </div>
-
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -427,19 +408,6 @@ export default function VenueProductsModal({
                                 rows={3}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 placeholder="Describe the product..."
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Flavor Profile / Notes
-                              </label>
-                              <textarea
-                                value={product.flavor_profile || ''}
-                                onChange={(e) => updateProduct(actualIndex, 'flavor_profile', e.target.value)}
-                                rows={3}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                placeholder="e.g., Smooth, fruity, with hints of vanilla..."
                               />
                             </div>
                           </div>
@@ -468,6 +436,7 @@ export default function VenueProductsModal({
                         </div>
                       );
                     })}
+                    
 
                     <div className="text-center">
                       <button

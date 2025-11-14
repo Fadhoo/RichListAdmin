@@ -28,7 +28,7 @@ export interface ServerSideBookingsActions {
 }
 
 interface UseServerSideBookingsOptions {
-  endpoint: string;
+  // endpoint: string;
   initialPageSize?: number;
   initialFilters?: Record<string, string>;
   autoFetch?: boolean;

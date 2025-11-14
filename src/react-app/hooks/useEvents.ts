@@ -29,7 +29,7 @@ export interface ServerSideEventsActions {
 }
 
 interface UseServerSideEventsOptions {
-  endpoint: string;
+  // endpoint: string;
   initialPageSize?: number;
   initialFilters?: Record<string, string>;
   autoFetch?: boolean;

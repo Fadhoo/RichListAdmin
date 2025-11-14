@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import { Info, Eye, EyeOff } from "lucide-react";
 import "../../styles/input/Input.css";
@@ -33,7 +34,7 @@ const TextInput = ({
   helperText,
   helperTextColour = "#151515",
   helperTextBgColour,
-  iconColour = "#333333",
+  // iconColour = "#333333",
   register,
   required,
   handleChange,

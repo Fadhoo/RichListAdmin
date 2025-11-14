@@ -123,7 +123,7 @@ const venueColumns: TableColumn<Venue>[] = [
 
 export default function VenuesPage() {
   const venuesResult = useVenues({});
-  const [tableState, tableActions] = Array.isArray(venuesResult) ? venuesResult : [{ data: [], loading: true, totalItems: 0, currentPage: 1, pageSize: 10, searchTerm: '', sortConfig: {}, filters: {} }, {}];
+  const [tableState, tableActions] = Array.isArray(venuesResult) ? venuesResult : [{ data: [], loading: true, totalItems: 0, currentPage: 1, pageSize: 10, searchTerm: '', sortConfig: {}, filters: {} }, { refresh: async () => {}} ];
   const refresh = tableActions.refresh;
 
   const [showForm, setShowForm] = useState(false);

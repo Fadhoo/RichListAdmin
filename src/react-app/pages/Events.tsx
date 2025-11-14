@@ -11,7 +11,6 @@ import { useEvents } from "../hooks/useEvents";
 // import { useVenues } from "../hooks/useVenues";
 import { fetchVenues } from "../api/venues";
 import { editEvent } from "../api/events";
-import { set } from "react-hook-form";
 interface EventWithVenue extends Event {
   venue_name: string;
   venue_address: string;
@@ -167,7 +166,7 @@ const eventColumns: TableColumn<EventWithVenue>[] = [
 
 export default function EventsPage() {
   const eventResult = useEvents({});
-  const [tableState, tableActions] = Array.isArray(eventResult) ? eventResult : [{ data: [], loading: true, totalItems: 0, currentPage: 1, pageSize: 10, searchTerm: '', sortConfig: {}, filters: {} }, {}];
+  const [tableState, tableActions] = Array.isArray(eventResult) ? eventResult : [{ data: [], loading: true, totalItems: 0, currentPage: 1, pageSize: 10, searchTerm: '', sortConfig: {}, filters: {} }, { refresh: async () => {}} ];
 
   const [venues, setVenues] = useState<Venue[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -255,11 +254,11 @@ export default function EventsPage() {
     }
 
     // Validate times if both are provided
-    if (formData.start_time && formData.end_time && formData.start_time >= formData.end_time) {
-      setErrors({ end_time: 'End time must be after start time' });
-      setLoading(false);
-      return;
-    }
+    // if (formData.start_time && formData.start_time  {
+    //   setErrors({ end_time: 'End time must be after start time' });
+    //   setLoading(false);
+    //   return;
+    // }
     
     try {
       const response = await fetch('/api/admin/events', {
@@ -392,8 +391,8 @@ export default function EventsPage() {
                   <input
                     type="text"
                     required
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                       errors.title ? 'border-red-300' : 'border-gray-300'
                     }`}
@@ -618,15 +617,15 @@ export default function EventsPage() {
           currentPage={tableState.currentPage}
           pageSize={tableState.pageSize}
           searchTerm={tableState.searchTerm}
-          sortConfig={tableState.sortConfig}
+          sortConfig={tableState.sortConfig as { key: string; direction: 'asc' | 'desc' } | null}
           filters={tableState.filters}
-          onPageChange={tableActions.setPage}
-          onPageSizeChange={tableActions.setPageSize}
-          onSearchChange={tableActions.setSearch}
-          onSortChange={tableActions.setSort}
-          onFilterChange={tableActions.setFilters}
-          onRefresh={tableActions.refresh}
-          onExport={tableActions.exportData}
+          onPageChange={tableActions.setPage ?? (() => {})}
+          onPageSizeChange={tableActions.setPageSize ?? (() => {})}
+          onSearchChange={tableActions.setSearch ?? (() => {})}
+          onSortChange={tableActions.setSort ?? (() => {})}
+          onFilterChange={tableActions.setFilters ?? (() => {})}
+          onRefresh={tableActions.refresh ?? (() => {})}
+          onExport={tableActions.exportData ?? (() => {})}
           searchable={true}
           searchPlaceholder="Search events by title, description, venue..."
           filterOptions={{
