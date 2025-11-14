@@ -5,7 +5,8 @@ export type Product = {
   name: string;
   price: number;
   desc: string;
-  categoryId: Category; // string
+  categoryId: Category; 
+  newCategory?: string;
   venueId: string;
   brand: string;
   id: string;

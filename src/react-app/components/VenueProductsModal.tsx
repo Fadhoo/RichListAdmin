@@ -3,7 +3,7 @@ import type { Venue } from "../types/venue";
 import type { Category } from "../types/categories";
 import { useState, useEffect } from "react";
 import { X, Save, Plus, Trash2, Wine, Coffee, Cigarette, GlassWater, UtensilsCrossed, Sparkles, Crown, Music } from "lucide-react";
-import { fetchProducts, updateProductsInBulk } from "../api/products";
+import { fetchProducts, updateProductsInBulk, deleteProduct } from "../api/products";
 import { fetchCategorys } from "../api/categories";
 import { Product } from "../types/products";
 
@@ -17,9 +17,11 @@ interface VenueProduct extends Product {
   imageId?: string;
   isActive: boolean;
   isFeatured?: boolean;
+  newCategory?: string;
 }
 
 interface ProductCategory {
+  id: any;
   name: string;
   desc: string;
   icon_name: string;
@@ -54,6 +56,7 @@ const defaultProduct: Omit<VenueProduct, 'venueId'> = {
     createdAt: new Date(),
     updatedAt: new Date(),
   },
+  newCategory: '',
   price: 0,
   desc: '',
   tags: [],
@@ -110,6 +113,7 @@ export default function VenueProductsModal({
         const data = response.data.results;
         setCategories(
           data.map((cat: Category) => ({
+            id: cat.id,
             name: cat.name,
             desc: cat.desc,
             icon_name: (cat as any).icon_name || "Wine",
@@ -133,9 +137,28 @@ export default function VenueProductsModal({
     setProducts([...products, newProduct]);
   };
 
-  const removeProduct = (index: number) => {
+  const removeProduct = async (index: number) => {
     const newProducts = products.filter((_, i) => i !== index);
     setProducts(newProducts);
+
+    const delProduct = products[index];
+    if (delProduct.id) {
+      // Optionally handle deletion from backend if needed
+      console.log("Product to delete from backend:", delProduct.id);
+      // const deleteFromBackend = async () => {
+      try {
+        const response = await deleteProduct(delProduct.id);
+        if (response.status > 200 && response.status <= 299) {
+          console.log("Product deleted successfully from backend");
+        } else {
+          console.error("Failed to delete product from backend");
+        }
+      } catch (error) {
+        console.error("Error deleting product from backend:", error)
+      };
+      
+      
+    }
   };
 
   const updateProduct = (index: number, field: keyof VenueProduct, value: any) => {
@@ -144,6 +167,7 @@ export default function VenueProductsModal({
       ...newProducts[index],
       [field]: value,
     };
+    console.log("Updated product:", newProducts[index]);
     setProducts(newProducts);
   };
 
@@ -167,6 +191,7 @@ export default function VenueProductsModal({
           isActive: product.isActive,
           isFeatured: product.isFeatured,
           brand: product.brand,
+          newCategory: product.categoryId.id || undefined,
           // serving_size: product.serving_size,
           // alcohol_content: product.alcohol_content,
           // flavor_profile: product.flavor_profile,
@@ -351,11 +376,12 @@ export default function VenueProductsModal({
                                   const selectedCategory = categories.find(cat => cat.name === e.target.value);
                                   if (selectedCategory) {
                                     updateProduct(actualIndex, 'categoryId', {
-                                      ...product.categoryId,
+                                      id: selectedCategory.id,
                                       name: selectedCategory.name,
                                       desc: selectedCategory.desc,
                                       // Optionally update icon_name and color_code if needed
                                     });
+                                    // updateProduct(actualIndex, 'newCategory', selectedCategory.id);
                                   }
                                 }}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
