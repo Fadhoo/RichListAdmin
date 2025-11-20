@@ -28,10 +28,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Venues', href: '/admin/venues', icon: MapPin },
     { name: 'Events', href: '/admin/events', icon: Calendar },
-    { name: 'Stories', href: '/admin/stories', icon: BookOpen },
+    // { name: 'Stories', href: '/admin/stories', icon: BookOpen },
     { name: 'Bookings', href: '/admin/bookings', icon: Users },
-    { name: 'Concierge', href: '/admin/concierge', icon: UserCheck },
-    { name: 'Users', href: '/admin/users', icon: Shield },
+    // { name: 'Concierge', href: '/admin/concierge', icon: UserCheck },
+    // { name: 'Users', href: '/admin/users', icon: Shield },
   ];
 
   const isActive = (path: string) => {
