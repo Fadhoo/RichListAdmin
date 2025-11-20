@@ -9,9 +9,9 @@ import {
   Menu,
   X,
   Music,
-  Shield,
-  UserCheck,
-  BookOpen
+  // Shield,
+  // UserCheck,
+  // BookOpen
 } from "lucide-react";
 import { useState } from "react";
 

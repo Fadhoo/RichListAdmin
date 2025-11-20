@@ -9,7 +9,6 @@ import { LoginBody, LoginResponseData } from "../types/auth";import { toast } fr
 import { setUser } from "@/react-app/lib/features/auth/authSlice";
 import TextInput from "../components/input/TextInput";
 import { login } from "../api/auth";
-import logo from "../assets/Logo.png";
 
 
 import { useEffect, useState } from "react";
