@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import Toast, {ToastType } from './Toast';
 
 export interface ToastOptions {
@@ -16,17 +16,17 @@ interface ToastMessage extends ToastOptions {
 
 export default function ToastContainer() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const nextId = useRef(0);
+  // const nextId = useRef(0);
 
   // This function is exposed via context to add new toasts
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const addToast: AddToast = ({ message, type = 'info', duration }) => {
-const id = (nextId.current++).toString();
-setToasts((prevToasts) => [
-  ...prevToasts,
-  { id, message, type, duration },
-]);
-  };
+//   const addToast: AddToast = ({ message, type = 'info', duration }) => {
+// const id = (nextId.current++).toString();
+// setToasts((prevToasts) => [
+//   ...prevToasts,
+//   { id, message, type, duration },
+// ]);
+//   };
 
   const removeToast = (id: string) => {
 setToasts((prevToasts) => prevToasts.filter((toast) => toast.id !== id));
