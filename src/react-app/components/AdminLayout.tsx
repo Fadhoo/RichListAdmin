@@ -11,7 +11,7 @@ import {
   Music,
   // Shield,
   // UserCheck,
-  // BookOpen
+  BookOpen
 } from "lucide-react";
 import { useState } from "react";
 
@@ -28,7 +28,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Venues', href: '/admin/venues', icon: MapPin },
     { name: 'Events', href: '/admin/events', icon: Calendar },
-    // { name: 'Stories', href: '/admin/stories', icon: BookOpen },
+    { name: 'Stories', href: '/admin/stories', icon: BookOpen },
     { name: 'Bookings', href: '/admin/bookings', icon: Users },
     // { name: 'Concierge', href: '/admin/concierge', icon: UserCheck },
     // { name: 'Users', href: '/admin/users', icon: Shield },
@@ -60,7 +60,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <div className="flex items-center justify-between h-16 px-6 border-b border-purple-800">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gradient-to-r from-purple-400 to-blue-400 rounded-lg flex items-center justify-center">
-                <Music className="w-5 h-5 text-white" />
+                <img src="https://ik.imagekit.io/twoobakery/posts/Logo.png" alt="RichList Logo" className="w-8 h-8" />
               </div>
               <span className="text-xl font-bold text-white">RichList</span>
             </div>
