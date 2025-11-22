@@ -12,6 +12,7 @@ import ConciergePage from "@/react-app/pages/Concierge";
 import UsersPage from "@/react-app/pages/Users";
 // import ProtectedRoute from "@/react-app/components/ProtectedRoute";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ToastProvider } from "@/react-app/contexts/ToastContext"; // Import ToastProvider
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,6 +39,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <ToastProvider>
         <Router>
           <Routes>
             <Route path="/" element={<HomePage />} />
@@ -52,6 +54,7 @@ export default function App() {
             <Route path="/admin/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
           </Routes>
         </Router>
+        </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

@@ -11,7 +11,7 @@ import { useEvents } from "../hooks/useEvents";
 // import { useVenues } from "../hooks/useVenues";
 import { fetchVenues } from "../api/venues";
 import { createEvent, deleteEvent, editEvent } from "../api/events";
-import { toast } from "react-toastify";
+import { useToast } from "@/react-app/contexts/ToastContext"; // Import useToast
 interface EventWithVenue extends Event {
   venue_name: string;
   venue_address: string;
@@ -169,6 +169,8 @@ export default function EventsPage() {
   const eventResult = useEvents({});
   const [tableState, tableActions] = Array.isArray(eventResult) ? eventResult : [{ data: [], loading: true, totalItems: 0, currentPage: 1, pageSize: 10, searchTerm: '', sortConfig: {}, filters: {} }, { refresh: async () => {}} ];
 
+    const { showSuccessToast, showErrorToast } = useToast(); // Use the toast hook
+
   const [venues, setVenues] = useState<Venue[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; event: EventWithVenue | null; loading: boolean }>({
@@ -265,8 +267,7 @@ export default function EventsPage() {
       const response = await createEvent(formData);
 
       if (response.status >=201 && response.status < 300) {
-        toast.success("Event created successfully");
-        // await response.data.json();
+        showSuccessToast("Event created successfully");
         tableActions.refresh(); // Refresh the table data
         setShowForm(false);
         setFormData({
@@ -283,8 +284,8 @@ export default function EventsPage() {
         });
         setErrors({});
       } else {
-        const error = await response.json();
-        console.error('Server error:', error);
+        const error = await response.data;
+        showErrorToast(error.error || 'Failed to create event');
         setErrors({ general: error.error || 'Failed to create event' });
       }
     } catch (error) {
@@ -301,15 +302,16 @@ export default function EventsPage() {
       const response = await editEvent(eventId, { status });
       setLoading(false);
 
-      if (response.status === 200) {
+      if (response.status >= 200 && response.status < 300) {
+        showSuccessToast(`Event ${status} successfully`);
         tableActions.refresh(); // Refresh the table data
       } else {
-        const error = await response.data.json();
-        alert(error.error || 'Failed to update event status');
+        const error = await response.data;
+        showErrorToast(error.error || 'Failed to update event status');
       }
     } catch (error) {
       console.error('Failed to update event status:', error);
-      alert('Failed to update event status. Please try again.');
+      showErrorToast('Failed to update event status. Please try again.');
     }
   };
 
@@ -330,16 +332,17 @@ export default function EventsPage() {
       const response = await deleteEvent(deleteModal.event.id);
 
       if (response.status >= 200 && response.status < 300) {
+        showSuccessToast("Event deleted successfully");
         tableActions.refresh(); // Refresh the table data
         setDeleteModal({ isOpen: false, event: null, loading: false });
       } else {
         const error = await response.data;
-        alert(error.error || 'Failed to delete event');
+        showErrorToast(error.error || 'Failed to delete event');
         setDeleteModal(prev => ({ ...prev, loading: false }));
       }
     } catch (error) {
       console.error('Failed to delete event:', error);
-      alert('Failed to delete event. Please try again.');
+      showErrorToast('Failed to delete event. Please try again.');
       setDeleteModal(prev => ({ ...prev, loading: false }));
     }
   };
