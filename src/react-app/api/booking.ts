@@ -3,6 +3,7 @@ import type { AxiosResponse } from "axios";
 import { axiosInstance } from "../hooks/useAxios";
 import { Booking } from "../types/bookings";
 import { GetPaginatedDataResponse } from "../types/apiResponse";
+import { toast } from "react-toastify";
 
 // // Placeholder Booking type
 // export type Booking = any;
@@ -45,6 +46,7 @@ export const editBooking = async (id: string, data: Booking) => {
   const url = `/v1/bookings/${id}`;
   try {
     const response = await axiosInstance().patch(url, data);
+    toast.success("Booking updated successfully");
     return response;
   } catch (error: any) {
     throw new Error(error ? error : "Please check your internet connection");

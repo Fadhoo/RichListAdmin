@@ -2,7 +2,7 @@
 import type { AxiosResponse } from "axios";
 import { axiosInstance } from "../hooks/useAxios";
 import { Venue, CreateVenue } from "../types/venue";
-// import { toast } from "react-toastify";
+import { toast } from "react-toastify";
 import { GetPaginatedDataResponse } from "../types/apiResponse";
 
 export const createVenue = async (data: CreateVenue) => {
@@ -11,6 +11,7 @@ export const createVenue = async (data: CreateVenue) => {
   try {
     const response = await axiosInstance().post(url, data);
 
+    toast.success("Venue created successfully");
     return response;
   } catch (error: any) {
     throw new Error(error ? error : "Please check your internet connection");
@@ -53,7 +54,7 @@ export const deleteVenue = async (id: string) => {
 
   try {
     const response = await axiosInstance().delete(url);
-
+    toast.success("Venue deleted successfully");
     return response;
   } catch (error: any) {
     throw new Error(error ? error : "Please check your internet connection");

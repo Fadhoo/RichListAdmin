@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // import type { AxiosResponse } from "axios";
+import { toast } from "react-toastify";
 import { axiosInstance } from "../hooks/useAxios";
 
 export const uploadImageToCloud = async (file: File) => {
@@ -14,7 +15,7 @@ export const uploadImageToCloud = async (file: File) => {
         "Content-Type": "multipart/form-data",
       },
     });
-    console.log("Image upload response:", response);
+    toast.success("Image uploaded successfully");
     return response;
   } catch (error) {
     console.error("Image upload failed:", error);

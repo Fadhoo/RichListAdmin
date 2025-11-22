@@ -2,6 +2,7 @@
 import type { AxiosResponse } from "axios";
 import { axiosInstance } from "../hooks/useAxios";
 import { CreateCategory, GetCategoryiesResponse } from "../types/categories";
+import { toast } from "react-toastify";
 // import { toast } from "react-toastify";
 
 export const createCategory = async (data: CreateCategory) => {
@@ -9,6 +10,7 @@ export const createCategory = async (data: CreateCategory) => {
 
   try {
     const response = await axiosInstance().post(url, data);
+    toast.success("Category created successfully");
 
     return response.data;
   } catch (error: any) {

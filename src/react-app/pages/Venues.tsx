@@ -9,6 +9,7 @@ import { useVenues } from "@/react-app/hooks/useVenues";
 import { Plus, MapPin, Users, Phone, Mail, Trash2, Edit, Wine } from "lucide-react";
 import type { Venue, CreateVenue } from "../types/venue";
 import ImageUpload from "@/react-app/components/ImageUpload";
+import { toast } from "react-toastify";
 
 // Define table columns
 const venueColumns: TableColumn<Venue>[] = [
@@ -184,9 +185,10 @@ export default function VenuesPage() {
   const handleDelete = async (venue: Venue) => {
     try {
       const response = await deleteVenue(venue.id.toString());
-      if (response.status === 200) {
+      if (response.status >= 200 && response.status < 300) {
         tableActions.refresh(); // Refresh the table data
         setDeleteModal({ isOpen: false, venue: null });
+        toast.success('Venue deleted successfully');
       }
     } catch (error) {
       console.error('Failed to delete venue:', error);

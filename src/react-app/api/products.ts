@@ -2,6 +2,7 @@
 import type { AxiosResponse } from "axios";
 import { axiosInstance } from "../hooks/useAxios";
 import { CreateProductBody, GetProductsResponse } from "../types/products";
+import { toast } from "react-toastify";
 // import { toast } from "react-toastify";
 
 export const createProduct = async (data: CreateProductBody) => {
@@ -9,6 +10,7 @@ export const createProduct = async (data: CreateProductBody) => {
 
   try {
     const response = await axiosInstance().post(url, data);
+    toast.success("Product created successfully");
 
     return response.data;
   } catch (error: any) {
@@ -49,11 +51,13 @@ export const updateProductsInBulk = async (productsToUpdate: { productId: string
 ) => {
   const url = `/v1/products/bulk-update`;
   try {
-    console.log("Updating products in bulk:", { venueId, updateBody: productsToUpdate, });
+    // console.log("Updating products in bulk:", { venueId, updateBody: productsToUpdate, });
     const response = await axiosInstance().patch(url, { 
       venueId,
       updateBody: productsToUpdate,
     });
+
+    toast.success("Products updated successfully");
     
     return response;
   } catch (error: any) {
@@ -66,6 +70,7 @@ export const editProduct = async (id: string, data: CreateProductBody) => {
 
   try {
     const response = await axiosInstance().patch(url, data);
+    toast.success("Product updated successfully");
 
     return response.data;
   } catch (error: any) {
@@ -78,6 +83,7 @@ export const deleteProduct = async (id: string) => {
 
   try {
     const response = await axiosInstance().delete(url);
+    toast.success("Product deleted successfully");
 
     return response.data;
   } catch (error: any) {

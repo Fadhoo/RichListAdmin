@@ -3,6 +3,7 @@ import type { AxiosResponse } from "axios";
 import { axiosInstance } from "../hooks/useAxios";
 // import { Event, CreateEvent } from "../types/shows";
 import { GetPaginatedDataResponse } from "../types/apiResponse";
+import { toast } from "react-toastify";
 
 // Placeholder Event type
 export type Event = any;
@@ -12,6 +13,7 @@ export const createEvent = async (data: CreateEvent) => {
   const url = "/v1/shows";
   try {
     const response = await axiosInstance().post(url, data);
+    toast.success("Event created successfully");
     return response;
   } catch (error: any) {
     throw new Error(error ? error : "Please check your internet connection");
@@ -44,6 +46,7 @@ export const editEvent = async (id: string, data: CreateEvent) => {
   const url = `/v1/shows/${id}`;
   try {
     const response = await axiosInstance().patch(url, data);
+    toast.success("Event updated successfully");
     return response;
   } catch (error: any) {
     throw new Error(error ? error : "Please check your internet connection");
@@ -54,6 +57,7 @@ export const deleteEvent = async (id: string) => {
   const url = `/v1/shows/${id}`;
   try {
     const response = await axiosInstance().delete(url);
+    toast.success("Event deleted successfully");
     return response;
   } catch (error: any) {
     throw new Error(error ? error : "Please check your internet connection");

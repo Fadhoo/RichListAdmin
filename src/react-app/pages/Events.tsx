@@ -10,7 +10,8 @@ import ImageUpload from "@/react-app/components/ImageUpload";
 import { useEvents } from "../hooks/useEvents";
 // import { useVenues } from "../hooks/useVenues";
 import { fetchVenues } from "../api/venues";
-import { editEvent } from "../api/events";
+import { createEvent, deleteEvent, editEvent } from "../api/events";
+import { toast } from "react-toastify";
 interface EventWithVenue extends Event {
   venue_name: string;
   venue_address: string;
@@ -261,17 +262,11 @@ export default function EventsPage() {
     // }
     
     try {
-      const response = await fetch('/api/admin/events', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(formData),
-      });
+      const response = await createEvent(formData);
 
-      if (response.ok) {
-        await response.json();
+      if (response.status >=201 && response.status < 300) {
+        toast.success("Event created successfully");
+        // await response.data.json();
         tableActions.refresh(); // Refresh the table data
         setShowForm(false);
         setFormData({
@@ -331,16 +326,14 @@ export default function EventsPage() {
     setDeleteModal(prev => ({ ...prev, loading: true }));
     
     try {
-      const response = await fetch(`/api/admin/events/${deleteModal.event.id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
+      console.log("Deleting event with ID:", deleteModal.event.id);
+      const response = await deleteEvent(deleteModal.event.id);
 
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         tableActions.refresh(); // Refresh the table data
         setDeleteModal({ isOpen: false, event: null, loading: false });
       } else {
-        const error = await response.json();
+        const error = await response.data;
         alert(error.error || 'Failed to delete event');
         setDeleteModal(prev => ({ ...prev, loading: false }));
       }
@@ -470,22 +463,40 @@ export default function EventsPage() {
                     disabled={loading}
                   />
                 </div>
-                {/* <div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     End Time
                   </label>
                   <input
                     type="time"
-                    value={new Date(formData.time).getTime() + duration || ''}
-                    onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                    value={formData.duration || ''}
+                    onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                     className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                       errors.end_time ? 'border-red-300' : 'border-gray-300'
                     }`}
                     disabled={loading}
                   />
                   {errors.end_time && <p className="text-red-600 text-sm mt-1">{errors.end_time}</p>}
-                </div> */}
+                </div>
               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">#
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Type of Event/Show
+                  </label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value as 'club' | 'houseParty' })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    disabled={loading}
+                  >
+                    <option value="club">Club</option>
+                    {/* <option value="houseParty">House Party</option> */}
+                  </select>
+                </div>
+
+               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -635,10 +646,6 @@ export default function EventsPage() {
               { label: 'Rejected', value: 'rejected' },
               { label: 'Cancelled', value: 'cancelled' }
             ],
-            is_house_party: [
-              { label: 'House Party', value: '1' },
-              { label: 'Venue Event', value: '0' }
-            ]
           }}
           emptyState={{
             icon: Calendar,
