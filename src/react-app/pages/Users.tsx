@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import AdminLayout from "@/react-app/components/AdminLayout";
-import UserEditModal from "@/react-app/components/UserEditModal";
+// import UserEditModal from "@/react-app/components/UserEditModal";
 import SubscriptionModal from "@/react-app/components/SubscriptionModal";
 import UserInviteModal from "@/react-app/components/UserInviteModal";
 import SubscriptionHistoryModal from "@/react-app/components/SubscriptionHistoryModal";
 import UserActivityModal from "@/react-app/components/UserActivityModal";
-import WalletManagementModal from "@/react-app/components/WalletManagementModal";
+// import WalletManagementModal from "@/react-app/components/WalletManagementModal";
 import DataTable, { TableColumn } from "@/react-app/components/DataTable";
 // import { useServerSideTable } from "@/react-app/hooks/useServerSideTable";
 import { Users, Shield, Activity, CreditCard, Eye, Ban, UserPlus, Settings, UserCheck, Edit, History, Wallet } from "lucide-react";
@@ -168,10 +168,10 @@ export default function UsersPage() {
 
   const [selectedUser, setSelectedUser] = useState<UserWithStats | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
-  const [editModal, setEditModal] = useState<{ isOpen: boolean; user: UserWithStats | null }>({
-    isOpen: false,
-    user: null,
-  });
+  // const [editModal, setEditModal] = useState<{ isOpen: boolean; user: UserWithStats | null }>({
+  //   isOpen: false,
+  //   user: null,
+  // });
   const [subscriptionModal, setSubscriptionModal] = useState<{ isOpen: boolean; user: UserWithStats | null }>({
     isOpen: false,
     user: null,
@@ -185,10 +185,10 @@ export default function UsersPage() {
     isOpen: false,
     user: null,
   });
-  const [walletModal, setWalletModal] = useState<{ isOpen: boolean; user: UserWithStats | null }>({
-    isOpen: false,
-    user: null,
-  });
+  // const [walletModal, setWalletModal] = useState<{ isOpen: boolean; user: UserWithStats | null }>({
+  //   isOpen: false,
+  //   user: null,
+  // });
 
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [, setAnalytics] = useState({
@@ -261,10 +261,10 @@ export default function UsersPage() {
     }
   };
 
-  const handleUserUpdate = () => {
-    tableActions.refresh(); // Refresh the table data
-    setEditModal({ isOpen: false, user: null });
-  };
+  // const handleUserUpdate = () => {
+  //   tableActions.refresh(); // Refresh the table data
+  //   setEditModal({ isOpen: false, user: null });
+  // };
 
   const handleUserInvite = async (emails: string[], role: string, subscriptionPlan: string) => {
     try {
@@ -414,9 +414,10 @@ export default function UsersPage() {
                     <Eye className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => {
-                      setEditModal({ isOpen: true, user: record });
-                    }}
+                    onClick={() => {}}
+                    // onClick={() => {
+                    //   setEditModal({ isOpen: true, user: record });
+                    // }}
                     className="text-gray-600 hover:text-purple-900"
                     title="Edit user"
                   >
@@ -457,9 +458,12 @@ export default function UsersPage() {
                     <Activity className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => {
-                      setWalletModal({ isOpen: true, user: record });
-                    }}
+                   onClick={ 
+                    () => {}
+                   }
+                    // onClick={() => {
+                    //   setWalletModal({ isOpen: true, user: record });
+                    // }}
                     className="text-green-600 hover:text-green-900"
                     title="Manage wallet"
                   >

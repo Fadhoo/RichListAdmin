@@ -1,12 +1,12 @@
-import { useAuth } from "@getmocha/users-service/react";
-import { useUsers } from "../hooks/useUsers";
+// import { useAuth } from "@getmocha/users-service/react";
+// import { useUsers } from "../hooks/useUsers";
 import { Link, useLocation } from "react-router";
 import { 
   LayoutDashboard, 
   MapPin, 
   Calendar, 
   Users, 
-  LogOut,
+  // LogOut,
   Menu,
   X,
   // Music,
@@ -21,16 +21,16 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
-  const user = useAuth();
+  // const user = useAuth();
   // const { user, logout } = useUsers();
 
-  const logout = async () => {
-    try {
-      await useAuth().logout();
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
-  };
+  // const logout = async () => {
+  //   try {
+  //     // await useAuth().logout();
+  //   } catch (error) {
+  //     console.error("Logout failed:", error);
+  //   }
+  // };
 
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -106,7 +106,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </nav>
 
           {/* User info and logout */}
-          <div className="p-4 border-t border-purple-800">
+          {/* <div className="p-4 border-t border-purple-800">
             <div className="flex items-center space-x-3 mb-4">
               <img
                 className="w-10 h-10 rounded-full border-2 border-purple-400"
@@ -129,7 +129,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <LogOut className="w-4 h-4" />
               <span className="text-sm">Sign out</span>
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
 

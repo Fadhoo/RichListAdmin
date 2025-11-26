@@ -6,7 +6,6 @@ import { X, Save, Plus, Trash2, Wine, Coffee, Cigarette, GlassWater, UtensilsCro
 import { fetchProducts, updateProductsInBulk, deleteProduct } from "../api/products";
 import { fetchCategorys } from "../api/categories";
 import { Product } from "../types/products";
-import { p } from "node_modules/react-router/dist/development/index-react-server-client-BIz4AUNd.d.mts";
 
 interface VenueProduct extends Product {
   id: string;
