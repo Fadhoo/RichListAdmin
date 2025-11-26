@@ -7,6 +7,15 @@ export type User = {
   email: string;
   dateOfBirth: Date;
   nationality: string;
+  picture: string;
+  createdAt: string;
+  last_login: string;
+  isActive: boolean;
+  stats: {
+    total_bookings?: number;
+    total_spent?: number;
+    events_created?: number;
+  };
   id: string;
   shopId?: string;
   ownerId?: string;
