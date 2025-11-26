@@ -6,6 +6,7 @@ import { X, Save, Plus, Trash2, Wine, Coffee, Cigarette, GlassWater, UtensilsCro
 import { fetchProducts, updateProductsInBulk, deleteProduct } from "../api/products";
 import { fetchCategorys } from "../api/categories";
 import { Product } from "../types/products";
+import { p } from "node_modules/react-router/dist/development/index-react-server-client-BIz4AUNd.d.mts";
 
 interface VenueProduct extends Product {
   id: string;
@@ -191,7 +192,7 @@ export default function VenueProductsModal({
           isActive: product.isActive,
           isFeatured: product.isFeatured,
           brand: product.brand,
-          newCategory: product.categoryId.id || undefined,
+          newCategory: product.categoryId.id ? product.categoryId.id : categories[0].id,
           // serving_size: product.serving_size,
           // alcohol_content: product.alcohol_content,
           // flavor_profile: product.flavor_profile,

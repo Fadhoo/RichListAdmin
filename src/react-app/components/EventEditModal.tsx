@@ -90,7 +90,8 @@ export default function EventEditModal({
     }
 
     try {
-      const response = await editEvent(event.id, formData);
+      const response = await editEvent(event.id, formData); 
+      console.log(response);
       if (response.status === 200) {
         onUpdate();
         onClose();

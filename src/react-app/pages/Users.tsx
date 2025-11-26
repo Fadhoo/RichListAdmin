@@ -7,62 +7,60 @@ import SubscriptionHistoryModal from "@/react-app/components/SubscriptionHistory
 import UserActivityModal from "@/react-app/components/UserActivityModal";
 import WalletManagementModal from "@/react-app/components/WalletManagementModal";
 import DataTable, { TableColumn } from "@/react-app/components/DataTable";
-import { useServerSideTable } from "@/react-app/hooks/useServerSideTable";
+// import { useServerSideTable } from "@/react-app/hooks/useServerSideTable";
 import { Users, Shield, Activity, CreditCard, Eye, Ban, UserPlus, Settings, UserCheck, DollarSign, Edit, History, Wallet } from "lucide-react";
+import { useUsers } from "../hooks/useUsers";
 
 interface User {
   id: string;
   email: string;
-  google_user_data: {
-    name: string;
-    picture: string;
-    email: string;
-  };
-  created_at: string;
+  name: string;
+  picture: string;
+  createdAt: string;
   last_login: string;
-  is_active: boolean;
+  isActive: boolean;
 }
 
 interface UserWithStats extends User {
   subscription?: {
-    plan_type: string;
-    status: string;
-    expires_at: string | null;
+    plan_type?: string;
+    status?: string;
+    expires_at?: string | null;
   };
-  wallet?: {
+  walletId?: {
     id: number;
     balance: number;
     currency: string;
-    is_active: boolean;
+    isActive: boolean;
   };
   stats: {
-    total_bookings: number;
-    total_spent: number;
-    events_created: number;
+    total_bookings?: number;
+    total_spent?: number;
+    events_created?: number;
   };
-  recent_activity: Array<{
+  recent_activity?: Array<{
     activity_type: string;
     description: string;
-    created_at: string;
+    createdAt: string;
   }>;
 }
 
 // Define table columns
 const userColumns: TableColumn<UserWithStats>[] = [
   {
-    key: 'google_user_data.name',
+    key: 'name',
     title: 'User',
     sortable: true,
     render: (_, record) => (
       <div className="flex items-center">
         <img
           className="w-10 h-10 rounded-full"
-          src={record.google_user_data.picture || 'https://via.placeholder.com/40'}
+          src={record.picture || 'https://via.placeholder.com/40'}
           alt="Profile"
         />
         <div className="ml-4">
           <div className="text-sm font-medium text-gray-900">
-            {record.google_user_data.name}
+            {record.name}
           </div>
           <div className="text-sm text-gray-500">
             {record.email}
@@ -100,27 +98,27 @@ const userColumns: TableColumn<UserWithStats>[] = [
       );
     },
   },
-  {
-    key: 'stats.total_bookings',
-    title: 'Activity',
-    render: (_, record) => (
-      <div className="text-sm space-y-1">
-        <div>{record.stats.total_bookings} bookings</div>
-        <div className="text-gray-500">{record.stats.events_created} events created</div>
-      </div>
-    ),
-  },
-  {
-    key: 'stats.total_spent',
-    title: 'Revenue',
-    sortable: true,
-    render: (value) => (
-      <div className="flex items-center space-x-1">
-        <DollarSign className="w-4 h-4 text-gray-400" />
-        <span className="text-sm font-medium text-gray-900">₦{value.toLocaleString()}</span>
-      </div>
-    ),
-  },
+  // {
+  //   key: 'stats.total_bookings',
+  //   title: 'Activity',
+  //   render: (_, record) => (
+  //     <div className="text-sm space-y-1">
+  //       <div>{record.stats.total_bookings} bookings</div>
+  //       <div className="text-gray-500">{record.stats.events_created} events created</div>
+  //     </div>
+  //   ),
+  // },
+  // {
+  //   key: 'stats.total_spent',
+  //   title: 'Revenue',
+  //   sortable: true,
+  //   render: (value) => (
+  //     <div className="flex items-center space-x-1">
+  //       <DollarSign className="w-4 h-4 text-gray-400" />
+  //       <span className="text-sm font-medium text-gray-900">₦{value.toLocaleString()}</span>
+  //     </div>
+  //   ),
+  // },
   {
     key: 'wallet.balance',
     title: 'Wallet',
@@ -128,13 +126,13 @@ const userColumns: TableColumn<UserWithStats>[] = [
       <div className="flex items-center space-x-1">
         <Wallet className="w-4 h-4 text-gray-400" />
         <span className="text-sm font-medium text-gray-900">
-          ₦{(record.wallet?.balance || 0).toLocaleString()}
+          ₦{(record.walletId?.balance || 0).toLocaleString()}
         </span>
       </div>
     ),
   },
   {
-    key: 'is_active',
+    key: 'isActive',
     title: 'Status',
     sortable: true,
     render: (value) => {
@@ -150,7 +148,7 @@ const userColumns: TableColumn<UserWithStats>[] = [
     },
   },
   {
-    key: 'created_at',
+    key: 'createdAt',
     title: 'Joined',
     sortable: true,
     render: (value) => new Date(value).toLocaleDateString(),
@@ -158,10 +156,9 @@ const userColumns: TableColumn<UserWithStats>[] = [
 ];
 
 export default function UsersPage() {
-  const [tableState, tableActions] = useServerSideTable({
-    endpoint: '/api/admin/users',
-    initialPageSize: 25,
-  });
+   const usersResult = useUsers({});
+    const [tableState, tableActions] = Array.isArray(usersResult) ? usersResult : [{ data: [], loading: true, totalItems: 0, currentPage: 1, pageSize: 10, searchTerm: '', sortConfig: {}, filters: {} }, { refresh: async () => {}} ];
+    // const refresh = tableActions.refresh;
 
   const [selectedUser, setSelectedUser] = useState<UserWithStats | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
@@ -208,9 +205,9 @@ export default function UsersPage() {
         await response.json();
         setAnalytics({
           totalUsers: tableState.totalItems,
-          activeUsers: tableState.data.filter((u: any) => u.is_active).length,
-          premiumUsers: tableState.data.filter((u: any) => u.subscription?.plan_type === 'platinum').length,
-          totalRevenue: tableState.data.reduce((sum: number, user: any) => sum + (user.stats.total_spent || 0), 0),
+          activeUsers:  usersResult[0]?.users.filter((u: any) => u.isActive).length ,
+          premiumUsers: usersResult[0]?.users.filter((u: any) => u.subscription?.plan_type === 'platinum').length || 0,
+          totalRevenue: usersResult[0]?.users.reduce((sum: number, user: any) => sum + (user.stats.total_spent || 0), 0),
         });
       }
     } catch (error) {
@@ -228,7 +225,7 @@ export default function UsersPage() {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ is_active: isActive }),
+        body: JSON.stringify({ isActive: isActive }),
       });
 
       if (response.ok) {
@@ -342,7 +339,8 @@ export default function UsersPage() {
                   {analyticsLoading ? (
                     <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
                   ) : (
-                    tableState.data.filter((u: any) => u.is_active).length
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    usersResult[0]?.users.filter((u: any) => u.isActive).length
                   )}
                 </p>
               </div>
@@ -360,7 +358,7 @@ export default function UsersPage() {
                   {analyticsLoading ? (
                     <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
                   ) : (
-                    tableState.data.filter((u: any) => u.subscription?.plan_type === 'platinum').length
+                    usersResult[0]?.users.filter((u: any) => u.subscription?.plan_type === 'platinum').length
                   )}
                 </p>
               </div>
@@ -374,13 +372,13 @@ export default function UsersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">
+                {/* <p className="text-2xl font-bold text-gray-900 mt-2">
                   {analyticsLoading ? (
                     <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
                   ) : (
-                    `₦${tableState.data.reduce((sum: number, user: any) => sum + (user.stats.total_spent || 0), 0).toLocaleString()}`
+                    `₦${usersResult[0]?.users.reduce((sum: number, user: any) => sum + (user.stats.total_spent || 0), 0).toLocaleString()}`
                   )}
-                </p>
+                </p> */}
               </div>
               <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center">
                 <Activity className="w-6 h-6 text-white" />
@@ -391,7 +389,7 @@ export default function UsersPage() {
 
         {/* Users Table */}
         <DataTable
-          data={tableState.data}
+          data={usersResult[0]?.users || []}
           columns={[
             ...userColumns,
             {
@@ -419,9 +417,9 @@ export default function UsersPage() {
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => updateUserStatus(record.id, !record.is_active)}
-                    className={record.is_active ? "text-red-600 hover:text-red-900" : "text-green-600 hover:text-green-900"}
-                    title={record.is_active ? "Deactivate user" : "Activate user"}
+                    onClick={() => updateUserStatus(record.id, !record.isActive)}
+                    className={record.isActive ? "text-red-600 hover:text-red-900" : "text-green-600 hover:text-green-900"}
+                    title={record.isActive ? "Deactivate user" : "Activate user"}
                   >
                     <Ban className="w-4 h-4" />
                   </button>
@@ -482,7 +480,7 @@ export default function UsersPage() {
           searchable={true}
           searchPlaceholder="Search users by name, email..."
           filterOptions={{
-            is_active: [
+            isActive: [
               { label: 'Active', value: '1' },
               { label: 'Inactive', value: '0' }
             ],
@@ -510,11 +508,11 @@ export default function UsersPage() {
                   <div className="flex items-center space-x-4">
                     <img
                       className="w-16 h-16 rounded-full"
-                      src={selectedUser.google_user_data.picture || 'https://via.placeholder.com/64'}
+                      src={selectedUser.picture || 'https://via.placeholder.com/64'}
                       alt="Profile"
                     />
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-900">{selectedUser.google_user_data.name}</h2>
+                      <h2 className="text-2xl font-bold text-gray-900">{selectedUser.name}</h2>
                       <p className="text-gray-600">{selectedUser.email}</p>
                     </div>
                   </div>
@@ -585,7 +583,7 @@ export default function UsersPage() {
                             <p className="text-sm font-medium text-gray-900">{activity.activity_type}</p>
                             <p className="text-sm text-gray-600">{activity.description}</p>
                             <p className="text-xs text-gray-500 mt-1">
-                              {new Date(activity.created_at).toLocaleString()}
+                              {new Date(activity.createdAt).toLocaleString()}
                             </p>
                           </div>
                         </div>
@@ -627,7 +625,7 @@ export default function UsersPage() {
           isOpen={subscriptionHistoryModal.isOpen}
           onClose={() => setSubscriptionHistoryModal({ isOpen: false, user: null })}
           userId={subscriptionHistoryModal.user?.id || ''}
-          userName={subscriptionHistoryModal.user?.google_user_data?.name || 'Unknown User'}
+          userName={subscriptionHistoryModal.user?.name || 'Unknown User'}
         />
 
         {/* User Activity Modal */}
@@ -635,7 +633,7 @@ export default function UsersPage() {
           isOpen={activityModal.isOpen}
           onClose={() => setActivityModal({ isOpen: false, user: null })}
           userId={activityModal.user?.id || ''}
-          userName={activityModal.user?.google_user_data?.name || 'Unknown User'}
+          userName={activityModal.user?.name || 'Unknown User'}
         />
 
         {/* Wallet Management Modal */}

@@ -1,4 +1,5 @@
 import { useAuth } from "@getmocha/users-service/react";
+import { useUsers } from "../hooks/useUsers";
 import { Link, useLocation } from "react-router";
 import { 
   LayoutDashboard, 
@@ -9,7 +10,7 @@ import {
   Menu,
   X,
   // Music,
-  // Shield,
+  Shield,
   // UserCheck,
   BookOpen
 } from "lucide-react";
@@ -20,7 +21,17 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
-  const { user, logout } = useAuth();
+  const user = useAuth();
+  // const { user, logout } = useUsers();
+
+  const logout = async () => {
+    try {
+      await useAuth().logout();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -31,7 +42,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { name: 'Stories', href: '/admin/stories', icon: BookOpen },
     { name: 'Bookings', href: '/admin/bookings', icon: Users },
     // { name: 'Concierge', href: '/admin/concierge', icon: UserCheck },
-    // { name: 'Users', href: '/admin/users', icon: Shield },
+    { name: 'Users', href: '/admin/users', icon: Shield },
   ];
 
   const isActive = (path: string) => {
@@ -99,12 +110,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <div className="flex items-center space-x-3 mb-4">
               <img
                 className="w-10 h-10 rounded-full border-2 border-purple-400"
-                src={user?.google_user_data.picture || 'https://via.placeholder.com/40'}
+                src={user?.picture || 'https://via.placeholder.com/40'}
                 alt="Profile"
               />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">
-                  {user?.google_user_data.name || user?.email}
+                  {user?.name || user?.email}
                 </p>
                 <p className="text-xs text-purple-200 truncate">
                   {user?.email}
