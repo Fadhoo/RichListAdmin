@@ -13,6 +13,7 @@ export type Event = {
 	totalTickets?: number | null;
 	imageId?: string | null;
 	status: string;
+	tags?: string[] | null;
     type: string;
     isActive: boolean;
     typeOfShow: string;
@@ -35,6 +36,7 @@ export type CreateEvent = {
 	imageId?: string | null;
 	status?: string;
 	isFeatured: boolean;
+	tags?: string[] | null;
     type: string;
     isActive?: boolean;
     typeOfShow?: string;

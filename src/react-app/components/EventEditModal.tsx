@@ -35,6 +35,7 @@ export default function EventEditModal({
     price: undefined,
     imageId: '',
     type: '',
+    tags: [],
     isFeatured: false,
     isActive: true,
     status: 'pending',
@@ -53,6 +54,7 @@ export default function EventEditModal({
         duration: event.duration || '',
         price: event.price || undefined,
         // capacity: event.venueId.capacity || undefined,
+        tags: event.tags || [],
         imageId: event.imageId || '',
         type: event.type,
         isFeatured: event.isFeatured,
@@ -280,15 +282,20 @@ export default function EventEditModal({
                 </label>
               </div>
             </div>
-              {/* <input
-                type="number"
-                value={formData.capacity || ''}
-                onChange={(e) => setFormData({ ...formData, capacity: e.target.value ? parseInt(e.target.value) : undefined })}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tags
+              </label>
+               {/* Please enter tags separated by commas. */}
+              <input
+                type="text"
+                value={formData.tags && formData.tags.length ? formData.tags.join(', ') : ''}
+                onChange={(e) => setFormData({ ...formData, tags: e.target.value.split(',').map(tag => tag.trim()) })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Max attendees"
+                placeholder="e.g., EDM, Hip-Hop, Live Band"
                 disabled={loading}
               />
-            </div> */}
+            </div>
           </div>
 
           <div>

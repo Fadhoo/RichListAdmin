@@ -483,23 +483,35 @@ export default function EventsPage() {
                 </div>
               </div>
 
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">#
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Type of Event/Show
                   </label>
                   <select
                     value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value as 'club' | 'houseParty' })}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value as 'club' | 'concert' })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     disabled={loading}
                   >
                     <option value="club">Club</option>
-                    {/* <option value="houseParty">House Party</option> */}
+                    <option value="concert">Concert</option>
                   </select>
                 </div>
-
-               </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tags
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.tags ? formData.tags.join(', ') : ''}
+                    onChange={(e) => setFormData({ ...formData, tags: e.target.value.split(',').map(tag => tag.trim()) })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="e.g., EDM, Hip-Hop, Live Band"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -529,7 +541,7 @@ export default function EventsPage() {
                 />
               </div>
 
-              <div className="flex items-center">
+              {/* <div className="flex items-center">
                 <input
                   type="checkbox"
                   id="house_party"
@@ -541,7 +553,7 @@ export default function EventsPage() {
                 <label htmlFor="house_party" className="ml-2 text-sm text-gray-700">
                   This is a house party (requires approval)
                 </label>
-              </div>
+              </div> */}
 
               <div className="flex justify-end space-x-4">
                 <button
