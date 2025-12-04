@@ -296,6 +296,38 @@ export default function EventEditModal({
                 disabled={loading}
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Featured/Popular 
+              </label>
+
+              <div className="flex items-center space-x-4">
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="isFeatured"
+                    value="true"
+                    checked={formData.isFeatured === true}
+                    onChange={() => setFormData({ ...formData, isFeatured: true })}
+                    className="form-radio text-purple-600"
+                    disabled={loading}
+                  />
+                  <span className="ml-2">Yes</span>
+                </label>
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="isFeatured"
+                    value="false"
+                    checked={formData.isFeatured === false}
+                    onChange={() => setFormData({ ...formData, isFeatured: false })}
+                    className="form-radio text-purple-600"
+                    disabled={loading}
+                  />
+                  <span className="ml-2">No</span>
+                </label>
+              </div>  
+            </div>
           </div>
 
           <div>
