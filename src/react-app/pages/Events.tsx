@@ -546,7 +546,7 @@ export default function EventsPage() {
                   <input
                     type="number"
                     value={formData.rank || ''}
-                    onChange={(e) => setFormData({ ...formData, rank: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, rank: e.target.value ? parseInt(e.target.value) : undefined })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="Enter ranking"
                     disabled={loading}

@@ -69,7 +69,8 @@ export function useVenues({
           state.currentPage,
           state.pageSize,
           state.searchTerm,
-          state.sortConfig ? `${state.sortConfig.key}:${state.sortConfig.direction}` : undefined
+          undefined
+          // state.sortConfig ? `${state.sortConfig.key}:${state.sortConfig.direction}` : undefined
         );
         setState(prev => ({
           ...prev,
@@ -94,7 +95,7 @@ export function useVenues({
     refresh: async () => {
       // Re-fetch venues data
       setState(prev => ({ ...prev, loading: true, error: null }));
-      const response = await fetchVenues(state.currentPage, state.pageSize, state.searchTerm, state.sortConfig ? `${state.sortConfig.key}:${state.sortConfig.direction}` : undefined);
+      const response = await fetchVenues(state.currentPage, state.pageSize, state.searchTerm, undefined);
       setState(prev => ({
         ...prev,
         venues: response.data.results,
@@ -127,6 +128,7 @@ export function useVenues({
       // Export table to csv or pdf
       console.log("Exporting data...");
     },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [state.currentPage, state.pageSize, state.searchTerm, state.sortConfig]);
 
   return [state, actions ];
