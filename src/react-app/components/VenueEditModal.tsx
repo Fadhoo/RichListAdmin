@@ -25,6 +25,7 @@ export default function VenueEditModal({
     phone: '',
     email: '',
     imageId: '',
+    thumbnail: '',
     rank: undefined,
     capacity: undefined,
     isActive: null,
@@ -42,6 +43,8 @@ export default function VenueEditModal({
         phone: venue.phone || '',
         email: venue.email || '',
         imageId: venue.imageId || '',
+        thumbnail: venue.thumbnail || '',
+        rank: venue.rank || undefined,
         capacity: venue.capacity || undefined,
         isActive: venue.isActive,
       });
@@ -240,7 +243,7 @@ export default function VenueEditModal({
               Venue Image
             </label>
             <ImageUpload
-              onUpload={(url) => setFormData({ ...formData, imageId: url })}
+              onUpload={(url, thumbnailUrl) => setFormData({ ...formData, imageId: url, thumbnail: thumbnailUrl })}
               currentImage={formData.imageId}
               maxSizeMB={10}
             />

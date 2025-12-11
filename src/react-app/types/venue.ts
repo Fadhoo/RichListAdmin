@@ -1,6 +1,3 @@
-// import { z } from "zod";
-
-// Venue type based on shared/types.ts VenueSchema
 export type Venue = {
 	id: string;
 	name: string;
@@ -13,6 +10,7 @@ export type Venue = {
 	rank?: number | null;
     image_url?: string | null;
 	capacity?: number | null;
+	thumbnail?: string | null;
 	isActive?: boolean | null;
 	createdAt: string;
 	updatedAt: string;
@@ -28,9 +26,8 @@ export type CreateVenue = {
 	email?: string;
 	imageId: string;
     image_url?: string;
+	thumbnail?: string;
 	capacity?: number;
 	isActive?: boolean | null;
 };
 
-// Optionally, export Zod schemas if needed in this file
-// import { VenueSchema, CreateVenueSchema } from '../../shared/types';

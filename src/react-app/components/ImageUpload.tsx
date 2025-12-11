@@ -4,7 +4,7 @@ import { Upload, X, Image, AlertCircle } from "lucide-react";
 import { uploadImageToCloud } from "../api/imageUploud";
 
 interface ImageUploadProps {
-  onUpload: (url: string) => void;
+  onUpload: (url: string, thumbnailUrl?: string) => void;
   currentImage?: string;
   className?: string;
   maxSizeMB?: number;
