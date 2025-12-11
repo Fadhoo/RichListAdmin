@@ -57,6 +57,14 @@ const eventColumns: TableColumn<EventWithVenue>[] = [
     ),
   },
   {
+    key: 'rank',
+    title: 'Ranking',
+    sortable: true,
+    render: (rank) => (
+      <span>{rank !== null && rank !== undefined ? rank : 'N/A'}</span>
+    ),
+  },
+  {
     key: 'event_date',
     title: 'Date & Time',
     sortable: true,
@@ -196,6 +204,7 @@ export default function EventsPage() {
     imageId: '',
     isFeatured: false,
     type: 'club',
+    rank: undefined,
   });
 
   useEffect(() => {
@@ -205,7 +214,7 @@ export default function EventsPage() {
   const fetchAllVenues = async () => {
     try {
       
-      const response = await fetchVenues( 1, 1000, '', 'createdAt:desc' );
+      const response = await fetchVenues( 1, 1000, '', undefined );
 
       if (response.status === 200) {
         const data = response.data;
@@ -278,6 +287,7 @@ export default function EventsPage() {
           time: '',
           duration: '',
           price: undefined,
+          rank: undefined,
           type: 'club',
           imageId: '',
           isFeatured: false,
@@ -525,6 +535,20 @@ export default function EventsPage() {
                     onChange={(e) => setFormData({ ...formData, price: e.target.value ? parseFloat(e.target.value) : undefined })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="0.00"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ranking
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.rank || ''}
+                    onChange={(e) => setFormData({ ...formData, rank: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Enter ranking"
                     disabled={loading}
                   />
                 </div>

@@ -18,14 +18,15 @@ export const createVenue = async (data: CreateVenue) => {
   }
 };
 
-export const fetchVenues = async (page: number, limit: number, search: string, sortBy="createdAt:desc") => {
+export const fetchVenues = async (page: number, limit: number, search: string, sortBy=undefined) => {
   const url = "/v1/venues";
+  console.log("Fetching venues with sortBy:", sortBy);
 
   try {
     const response: AxiosResponse<GetPaginatedDataResponse<Venue[]>> = await axiosInstance().get(url, {
       params: {
         page,
-        sortBy,
+        // sortBy,
         limit,
         ...(search ? { search } : {}),
       },

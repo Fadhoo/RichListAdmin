@@ -8,6 +8,7 @@ export type Event = {
 	promoterId?: string | null;
 	date: string;
 	time?: string | null;
+	rank?: number | null;
 	duration?: string | null;
 	price?: number | null;
 	totalTickets?: number | null;
@@ -28,6 +29,7 @@ export type CreateEvent = {
 	desc?: string | null;
 	venueId: string;
 	promoterId?: string | null;
+	rank?: number | null;
 	date: string;
 	time?: string | null;
 	duration?: string | null;

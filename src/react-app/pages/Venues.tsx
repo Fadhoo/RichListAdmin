@@ -45,6 +45,14 @@ const venueColumns: TableColumn<Venue>[] = [
     ),
   },
   {
+    key: 'rank',
+    title: 'Ranking',
+    sortable: true,
+    render: (rank) => (
+      <span>{rank !== null && rank !== undefined ? rank : 'N/A'}</span>
+    ),
+  },
+  {
     key: 'city',
     title: 'Location',
     sortable: true,
@@ -233,6 +241,20 @@ export default function VenuesPage() {
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="Enter venue name"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ranking
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.rank || ''}
+                    onChange={(e) => setFormData({ ...formData, rank: e.target.value ? parseInt(e.target.value) : undefined })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Enter ranking"
+                  />  
+                  
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">

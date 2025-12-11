@@ -10,6 +10,7 @@ export type Venue = {
 	phone?: string | null;
 	email?: string | null;
 	imageId?: string | null;
+	rank?: number | null;
     image_url?: string | null;
 	capacity?: number | null;
 	isActive?: boolean | null;
@@ -23,6 +24,7 @@ export type CreateVenue = {
 	location?: string;
 	city?: string;
 	phone?: string;
+	rank?: number;
 	email?: string;
 	imageId: string;
     image_url?: string;
