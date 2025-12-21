@@ -51,16 +51,19 @@ export const updateProductsInBulk = async (productsToUpdate: { productId: string
 ) => {
   const url = `/v1/products/bulk-update`;
   try {
-    // console.log("Updating products in bulk:", { venueId, updateBody: productsToUpdate, });
+    console.log("Updating products in bulk:", { venueId, updateBody: productsToUpdate, });
     const response = await axiosInstance().patch(url, { 
       venueId,
       updateBody: productsToUpdate,
     });
 
-    toast.success("Products updated successfully");
+    if (response.status === 200) {
+      toast.success("Products updated successfully");
+    }
     
     return response;
   } catch (error: any) {
+    toast.error(error);
     throw new Error(error ? error : "Please check your internet connection");
   }
 };
