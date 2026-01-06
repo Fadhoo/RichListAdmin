@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Upload, X, Play, AlertCircle } from "lucide-react";
+import { uploadImageToCloud } from "../api/imageUploud";
 
 interface VideoUploadProps {
   value?: string;
@@ -33,29 +34,48 @@ export default function VideoUpload({ value, onChange, className = '', disabled 
     setError(null);
     setUploading(true);
 
-    try {
-      const formData = new FormData();
-      formData.append('video', file);
+    // Validate video duration (max 15 seconds)
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.src = url;
 
-      const response = await fetch('/api/admin/upload/video', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
+    const validateAndUpload = async () => {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          video.onloadedmetadata = () => {
+            if (video.duration > 15) {
+              setError('Video duration must be 15 seconds or less');
+              setUploading(false);
+              URL.revokeObjectURL(url);
+              reject();
+            } else {
+              resolve();
+            }
+          };
+          video.onerror = () => {
+            setError('Failed to load video metadata');
+            setUploading(false);
+            URL.revokeObjectURL(url);
+            reject();
+          };
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Upload failed');
+        // Upload using shared function
+        const response = await uploadImageToCloud(file);
+        const data = response.data;
+        onChange(data.url);
+      } catch (err) {
+        if (!error) {
+          setError('Upload failed');
+        }
+      } finally {
+        setUploading(false);
+        URL.revokeObjectURL(url);
       }
+    };
 
-      const data = await response.json();
-      onChange(data.url);
-    } catch (error) {
-      console.error('Upload error:', error);
-      setError(error instanceof Error ? error.message : 'Upload failed');
-    } finally {
-      setUploading(false);
-    }
+    validateAndUpload();
   };
 
   const handleDrop = (e: React.DragEvent) => {

@@ -11,7 +11,7 @@ import {
   X,
   // Music,
   Shield,
-  // UserCheck,
+  UserCheck,
   BookOpen
 } from "lucide-react";
 import { useState } from "react";
@@ -41,7 +41,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { name: 'Events', href: '/admin/events', icon: Calendar },
     { name: 'Stories', href: '/admin/stories', icon: BookOpen },
     { name: 'Bookings', href: '/admin/bookings', icon: Users },
-    // { name: 'Concierge', href: '/admin/concierge', icon: UserCheck },
+    { name: 'Concierge', href: '/admin/concierge', icon: UserCheck },
     { name: 'Users', href: '/admin/users', icon: Shield },
   ];
 

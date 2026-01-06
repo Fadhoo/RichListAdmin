@@ -28,6 +28,7 @@ export const fetchUsers = async (page: number, limit: number, search: string, so
         sortBy,
         limit,
         ...(search ? { search } : {}),
+        populate: 'walletId',
       },
     });
 
@@ -41,7 +42,7 @@ export const editUser = async (id: string, data: Partial<User>) => {
   const url = `/v1/users/${id}`;
 
   try {
-    const response = await axiosInstance().patch(url, data);
+    const response = await axiosInstance().post(url, data);
 
     return response;
   } catch (error: any) {

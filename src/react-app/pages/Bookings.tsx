@@ -58,31 +58,47 @@ const getBookingColumns = (
     title: 'Event Details',
     sortable: true,
     render: (_, record) => (
-      <div className="space-y-1">
+      <div  className="space-y-1">
         <div className="text-sm font-medium text-gray-900">
-          {record.showId.name || 'Unknown Event'}
+          {record.showId ? record.showId.name || 'Unknown Event' : '-'}
         </div>
         <div className="flex items-center text-xs text-gray-500">
           <MapPin className="w-3 h-3 mr-1" />
-          {typeof record.showId.venueId === 'object' && record.showId.venueId !== null
+          {record.showId ? (typeof record.showId.venueId === 'object' && record.showId.venueId !== null
             ? record.showId.venueId.name
             : typeof record.showId.venueId === 'string'
               ? record.showId.venueId
-              : 'Unknown Venue'}
+              : 'Unknown Venue') : '-'}
         </div>
         <div className="flex items-center text-xs text-gray-500">
           <Calendar className="w-3 h-3 mr-1" />
-          {new Date(record.showId.date || 'Unknown').toLocaleDateString()}
+          {new Date(record.showId ? record.showId.date || 'Unknown' : 'Unknown').toLocaleDateString()}
         </div>
       </div>
     ),
   },
   {
-    key: 'userId',
+    key: 'concierge_title',
+    title: 'Concierge Details',
+    sortable: true,
+    render: (_, record) => (
+      <div  className="space-y-1">
+        <div className="text-sm font-medium text-gray-900">
+          {record.conciergeId ? record.conciergeId.name || 'No Concierge' : '-'}
+        </div>
+        <div className="flex items-center text-xs text-gray-500">
+          <MapPin className="w-3 h-3 mr-1" />
+          {record.conciergeId ? (record.location || 'No PickUp Location') : '-'}
+        </div>
+      </div>
+    ),
+  },
+  {
+    key: 'userId.name',
     title: 'Customer',
     render: (value) => (
       <div className="text-sm">
-        <div className="font-medium text-gray-900">User ID</div>
+        <div className="font-medium text-gray-900">UserName</div>
         <div className="text-gray-500 font-mono text-xs">{value}</div>
       </div>
     ),

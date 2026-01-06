@@ -1,27 +1,18 @@
 import { useState, useEffect } from "react";
 import { X, Save } from "lucide-react";
+import { User } from "../types/users";
 
-interface UserWithStats {
+interface UserWithStats extends User {
   id: string;
   email: string;
-  google_user_data: {
-    name: string;
-    picture: string;
-    email: string;
-  };
-  created_at: string;
-  last_login: string;
-  is_active: boolean;
-  subscription?: {
-    plan_type: string;
-    status: string;
-    expires_at: string | null;
-  };
-  wallet?: {
+  createdAt: string;
+  lastLogin: string;
+  isActive: boolean;
+  walletId?: {
     id: number;
     balance: number;
     currency: string;
-    is_active: boolean;
+    isActive: boolean;
   };
   stats: {
     total_bookings: number;
@@ -44,7 +35,7 @@ interface UserEditModalProps {
 
 interface UpdateUserData {
   email?: string;
-  is_active?: boolean;
+  isActive?: boolean;
 }
 
 export default function UserEditModal({
@@ -61,7 +52,7 @@ export default function UserEditModal({
     if (user) {
       setFormData({
         email: user.email,
-        is_active: user.is_active,
+        isActive: user.isActive,
       });
     }
   }, [user]);
@@ -110,14 +101,14 @@ export default function UserEditModal({
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <img
+              {/* <img
                 className="w-10 h-10 rounded-full"
                 src={user.google_user_data.picture || 'https://via.placeholder.com/40'}
                 alt="Profile"
-              />
+              /> */}
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">Edit User</h2>
-                <p className="text-sm text-gray-600">{user.google_user_data.name}</p>
+                <p className="text-sm text-gray-600">{user.name}</p>
               </div>
             </div>
             <button
@@ -147,21 +138,21 @@ export default function UserEditModal({
               </div>
               <div>
                 <span className="text-gray-600">Joined:</span>
-                <span className="ml-2">{new Date(user.created_at).toLocaleDateString()}</span>
+                <span className="ml-2">{new Date(user.createdAt).toLocaleDateString()}</span>
               </div>
               <div>
                 <span className="text-gray-600">Last Login:</span>
-                <span className="ml-2">{user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}</span>
+                <span className="ml-2">{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</span>
               </div>
-              <div>
+              {/* <div>
                 <span className="text-gray-600">Google Name:</span>
                 <span className="ml-2">{user.google_user_data.name}</span>
-              </div>
+              </div> */}
             </div>
           </div>
 
           {/* User Stats */}
-          <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4">
+          {/* <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4">
             <h3 className="font-medium text-gray-900 mb-3">User Statistics</h3>
             <div className="grid grid-cols-4 gap-4">
               <div className="text-center">
@@ -177,37 +168,11 @@ export default function UserEditModal({
                 <div className="text-sm text-gray-600">Events Created</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-emerald-600">₦{(user.wallet?.balance || 0).toLocaleString()}</div>
+                <div className="text-2xl font-bold text-emerald-600">₦{(user.walletId?.balance || 0).toLocaleString()}</div>
                 <div className="text-sm text-gray-600">Wallet Balance</div>
               </div>
             </div>
-          </div>
-
-          {/* Subscription Info */}
-          {user.subscription && (
-            <div className="bg-yellow-50 rounded-xl p-4">
-              <h3 className="font-medium text-gray-900 mb-2">Current Subscription</h3>
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                    user.subscription.plan_type === 'premium' ? 'bg-purple-100 text-purple-800' :
-                    user.subscription.plan_type === 'pro' ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {user.subscription.plan_type}
-                  </span>
-                  <span className="ml-2 text-sm text-gray-600">
-                    Status: {user.subscription.status}
-                  </span>
-                </div>
-                {user.subscription.expires_at && (
-                  <div className="text-sm text-gray-600">
-                    Expires: {new Date(user.subscription.expires_at).toLocaleDateString()}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          </div> */}
 
           {/* Editable Fields */}
           <div className="space-y-4">
@@ -229,14 +194,14 @@ export default function UserEditModal({
               <div>
                 <h3 className="text-sm font-medium text-gray-900">Account Status</h3>
                 <p className="text-sm text-gray-600">
-                  {formData.is_active ? 'Account is active and can access the platform' : 'Account is deactivated and cannot access the platform'}
+                  {formData.isActive ? 'Account is active and can access the platform' : 'Account is deactivated and cannot access the platform'}
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={formData.is_active || false}
-                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                  checked={formData.isActive || false}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                   className="sr-only peer"
                   disabled={loading}
                 />

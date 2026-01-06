@@ -1,17 +1,14 @@
 import { useState, useEffect } from "react";
 import { X, Plus, Minus, Wallet, TrendingUp, TrendingDown, DollarSign, Clock, User, FileText } from "lucide-react";
 import LoadingSpinner from "./LoadingSpinner";
+// import User from "../types/users";
 
 interface UserWithWallet {
-  id: string;
+  _id: string;
   email: string;
-  google_user_data: {
-    name: string;
-    picture: string;
-    email: string;
-  };
-  wallet?: {
-    id: number;
+  
+  walletId?: {
+    _id: number;
     balance: number;
     currency: string;
     is_active: boolean;
@@ -19,7 +16,7 @@ interface UserWithWallet {
 }
 
 interface WalletTransaction {
-  id: number;
+  _id: number;
   transaction_type: string;
   amount: number;
   balance_before: number;
@@ -68,7 +65,7 @@ export default function WalletManagementModal({
     
     setLoading(true);
     try {
-      const response = await fetch(`/api/admin/users/${user.id}/wallet`, {
+      const response = await fetch(`/api/admin/users/${user._id}/wallet`, {
         credentials: 'include',
       });
 
@@ -88,7 +85,7 @@ export default function WalletManagementModal({
     
     setTransactionsLoading(true);
     try {
-      const response = await fetch(`/api/admin/users/${user.id}/wallet/transactions?page=${page}&limit=10`, {
+      const response = await fetch(`/api/admin/users/${user._id}/wallet/transactions?page=${page}&limit=10`, {
         credentials: 'include',
       });
 
@@ -122,7 +119,7 @@ export default function WalletManagementModal({
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/admin/users/${user?.id}/wallet/adjust`, {
+      const response = await fetch(`/api/admin/users/${user?._id}/wallet/adjust`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -361,7 +358,7 @@ export default function WalletManagementModal({
             ) : (
               <div className="space-y-3">
                 {transactions.map((transaction) => (
-                  <div key={transaction.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div key={transaction._id} className="bg-white border border-gray-200 rounded-lg p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start space-x-3">
                         {getTransactionIcon(transaction.transaction_type)}

@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import AdminLayout from "@/react-app/components/AdminLayout";
-// import UserEditModal from "@/react-app/components/UserEditModal";
-import SubscriptionModal from "@/react-app/components/SubscriptionModal";
+import UserEditModal from "@/react-app/components/UserEditModal";
 import UserInviteModal from "@/react-app/components/UserInviteModal";
 import SubscriptionHistoryModal from "@/react-app/components/SubscriptionHistoryModal";
 import UserActivityModal from "@/react-app/components/UserActivityModal";
@@ -12,44 +11,12 @@ import DataTable, { TableColumn } from "@/react-app/components/DataTable";
 import { Users, Shield, Activity, CreditCard, Eye, Ban, UserPlus, Settings, UserCheck, Edit, History, Wallet } from "lucide-react";
 import { useUsers } from "../hooks/useUsers";
 
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  picture: string;
-  createdAt: string;
-  last_login: string;
-  isActive: boolean;
-  stats: {
-    total_bookings?: number;
-    total_spent?: number;
-    events_created?: number;
-  };
-}
+// Remove local User definition if not needed, or update imports to use shared types if required elsewhere
+// import type { User } from "@/react-app/types/User";
 
-interface UserWithStats extends User {
-  subscription?: {
-    plan_type?: string;
-    status?: string;
-    expires_at?: string | null;
-  };
-  walletId?: {
-    id: number;
-    balance: number;
-    currency: string;
-    isActive: boolean;
-  };
-  stats: {
-    total_bookings?: number;
-    total_spent?: number;
-    events_created?: number;
-  };
-  recent_activity?: Array<{
-    activity_type: string;
-    description: string;
-    createdAt: string;
-  }>;
-}
+// Remove local UserWithStats definition and import the shared type instead
+import type { UserWithStats } from "@/react-app/types/UserWithStats";
+import { editUser } from "../api/users";
 
 // Define table columns
 const userColumns: TableColumn<UserWithStats>[] = [
@@ -75,56 +42,6 @@ const userColumns: TableColumn<UserWithStats>[] = [
       </div>
     ),
   },
-  {
-    key: 'subscription.plan_type',
-    title: 'Subscription',
-    sortable: true,
-    render: (_, record) => {
-      const getPlanColor = (planType: string) => {
-        switch (planType) {
-          case 'platinum':
-            return 'bg-purple-100 text-purple-800';
-          case 'gold':
-            return 'bg-yellow-100 text-yellow-800';
-          case 'basic':
-            return 'bg-gray-100 text-gray-800';
-          default:
-            return 'bg-gray-100 text-gray-800';
-        }
-      };
-
-      const planType = record.subscription?.plan_type || 'basic';
-      return (
-        <div className="flex items-center space-x-2">
-          <CreditCard className="w-4 h-4 text-gray-400" />
-          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getPlanColor(planType)}`}>
-            {planType}
-          </span>
-        </div>
-      );
-    },
-  },
-  // {
-  //   key: 'stats.total_bookings',
-  //   title: 'Activity',
-  //   render: (_, record) => (
-  //     <div className="text-sm space-y-1">
-  //       <div>{record.stats.total_bookings} bookings</div>
-  //       <div className="text-gray-500">{record.stats.events_created} events created</div>
-  //     </div>
-  //   ),
-  // },
-  // {
-  //   key: 'stats.total_spent',
-  //   title: 'Revenue',
-  //   sortable: true,
-  //   render: (value) => (
-  //     <div className="flex items-center space-x-1">
-  //       <DollarSign className="w-4 h-4 text-gray-400" />
-  //       <span className="text-sm font-medium text-gray-900">₦{value.toLocaleString()}</span>
-  //     </div>
-  //   ),
-  // },
   {
     key: 'wallet.balance',
     title: 'Wallet',
@@ -164,18 +81,9 @@ const userColumns: TableColumn<UserWithStats>[] = [
 export default function UsersPage() {
    const usersResult = useUsers({});
     const [tableState, tableActions] = Array.isArray(usersResult) ? usersResult : [{ data: [], loading: true, totalItems: 0, currentPage: 1, pageSize: 10, searchTerm: '', sortConfig: undefined, filters: {} }, { refresh: async () => {}} ];
-    // const refresh = tableActions.refresh;
 
   const [selectedUser, setSelectedUser] = useState<UserWithStats | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
-  // const [editModal, setEditModal] = useState<{ isOpen: boolean; user: UserWithStats | null }>({
-  //   isOpen: false,
-  //   user: null,
-  // });
-  const [subscriptionModal, setSubscriptionModal] = useState<{ isOpen: boolean; user: UserWithStats | null }>({
-    isOpen: false,
-    user: null,
-  });
   const [inviteModal, setInviteModal] = useState(false);
   const [subscriptionHistoryModal, setSubscriptionHistoryModal] = useState<{ isOpen: boolean; user: UserWithStats | null }>({
     isOpen: false,
@@ -185,16 +93,16 @@ export default function UsersPage() {
     isOpen: false,
     user: null,
   });
-  // const [walletModal, setWalletModal] = useState<{ isOpen: boolean; user: UserWithStats | null }>({
-  //   isOpen: false,
-  //   user: null,
-  // });
+
+  const [walletModal, setWalletModal] = useState<{ isOpen: boolean; user: UserWithStats | null }>({
+    isOpen: false,
+    user: null,
+  });
 
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [, setAnalytics] = useState({
     totalUsers: 0,
     activeUsers: 0,
-    premiumUsers: 0,
     totalRevenue: 0,
   });
 
@@ -212,7 +120,6 @@ export default function UsersPage() {
         setAnalytics({
           totalUsers: tableState.totalItems,
           activeUsers:  usersResult[0]?.users.filter((u: any) => u.isActive).length ,
-          premiumUsers: usersResult[0]?.users.filter((u: any) => u.subscription?.plan_type === 'platinum').length || 0,
           totalRevenue: usersResult[0]?.users.reduce((sum: number, user: any) => sum + (user.stats.total_spent || 0), 0),
         });
       }
@@ -225,16 +132,9 @@ export default function UsersPage() {
 
   const updateUserStatus = async (userId: string, isActive: boolean) => {
     try {
-      const response = await fetch(`/api/admin/users/${userId}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ isActive: isActive }),
-      });
+      const response = await editUser(userId, { isActive });
 
-      if (response.ok) {
+      if (response.status === 200 || response.status === 204) {
         tableActions.refresh(); // Refresh the table data
       }
     } catch (error) {
@@ -242,29 +142,15 @@ export default function UsersPage() {
     }
   };
 
-  const updateUserSubscription = async (userId: string, planType: string) => {
-    try {
-      const response = await fetch(`/api/admin/users/${userId}/subscription`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ plan_type: planType }),
-      });
+  const [editModal, setEditModal] = useState<{ isOpen: boolean; user: UserWithStats | null }>({
+    isOpen: false,
+    user: null,
+  });
 
-      if (response.ok) {
-        tableActions.refresh(); // Refresh the table data
-      }
-    } catch (error) {
-      console.error('Failed to update user subscription:', error);
-    }
+  const handleUserUpdate = () => {
+    tableActions.refresh(); // Refresh the table data
+    setEditModal({ isOpen: false, user: null });
   };
-
-  // const handleUserUpdate = () => {
-  //   tableActions.refresh(); // Refresh the table data
-  //   setEditModal({ isOpen: false, user: null });
-  // };
 
   const handleUserInvite = async (emails: string[], role: string, subscriptionPlan: string) => {
     try {
@@ -356,7 +242,7 @@ export default function UsersPage() {
             </div>
           </div>
           
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          {/* <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Platinum Users</p>
@@ -372,7 +258,7 @@ export default function UsersPage() {
                 <CreditCard className="w-6 h-6 text-white" />
               </div>
             </div>
-          </div>
+          </div> */}
           
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between">
@@ -414,39 +300,20 @@ export default function UsersPage() {
                     <Eye className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => {}}
-                    // onClick={() => {
-                    //   setEditModal({ isOpen: true, user: record });
-                    // }}
+                    onClick={() => {
+                      setEditModal({ isOpen: true, user: record });
+                    }}
                     className="text-gray-600 hover:text-purple-900"
                     title="Edit user"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => updateUserStatus(record.id, !record.isActive)}
+                    onClick={() => updateUserStatus(record._id, !record.isActive)}
                     className={record.isActive ? "text-red-600 hover:text-red-900" : "text-green-600 hover:text-green-900"}
                     title={record.isActive ? "Deactivate user" : "Activate user"}
                   >
                     <Ban className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSubscriptionModal({ isOpen: true, user: record });
-                    }}
-                    className="text-purple-600 hover:text-purple-900"
-                    title="Manage subscription"
-                  >
-                    <Settings className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSubscriptionHistoryModal({ isOpen: true, user: record });
-                    }}
-                    className="text-blue-600 hover:text-blue-900"
-                    title="View subscription history"
-                  >
-                    <History className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => {
@@ -455,15 +322,14 @@ export default function UsersPage() {
                     className="text-indigo-600 hover:text-indigo-900"
                     title="View user activity"
                   >
-                    <Activity className="w-4 h-4" />
                   </button>
                   <button
-                   onClick={ 
-                    () => {}
-                   }
-                    // onClick={() => {
-                    //   setWalletModal({ isOpen: true, user: record });
-                    // }}
+                  //  onClick={ 
+                  //   () => {}
+                  //  }
+                    onClick={() => {
+                      setWalletModal({ isOpen: true, user: record });
+                    }}
                     className="text-green-600 hover:text-green-900"
                     title="Manage wallet"
                   >
@@ -494,11 +360,6 @@ export default function UsersPage() {
               { label: 'Active', value: '1' },
               { label: 'Inactive', value: '0' }
             ],
-            'subscription.plan_type': [
-              { label: 'Basic', value: 'basic' },
-              { label: 'Gold', value: 'gold' },
-              { label: 'Platinum', value: 'platinum' }
-            ]
           }}
           emptyState={{
             icon: UserCheck,
@@ -538,7 +399,7 @@ export default function UsersPage() {
               <div className="p-6 space-y-6">
                 {/* User Stats */}
                 <div className="grid grid-cols-4 gap-4">
-                  <div className="bg-gray-50 rounded-xl p-4">
+                  {/* <div className="bg-gray-50 rounded-xl p-4">
                     <p className="text-sm text-gray-600">Total Bookings</p>
                     <p className="text-xl font-bold text-gray-900">{selectedUser.stats.total_bookings}</p>
                   </div>
@@ -549,35 +410,12 @@ export default function UsersPage() {
                   <div className="bg-gray-50 rounded-xl p-4">
                     <p className="text-sm text-gray-600">Events Created</p>
                     <p className="text-xl font-bold text-gray-900">{selectedUser.stats.events_created}</p>
-                  </div>
+                  </div> */}
                   <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4">
                     <p className="text-sm text-gray-600">Wallet Balance</p>
                     <p className="text-xl font-bold text-green-700">₦{(selectedUser.walletId?.balance || 0).toLocaleString()}</p>
                   </div>
                 </div>
-
-                {/* Subscription Info */}
-                {selectedUser.subscription && (
-                  <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Subscription Details</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-gray-600">Plan</p>
-                        <p className="font-medium capitalize">{selectedUser.subscription.plan_type}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Status</p>
-                        <p className="font-medium capitalize">{selectedUser.subscription.status}</p>
-                      </div>
-                      {selectedUser.subscription.expires_at && (
-                        <div>
-                          <p className="text-sm text-gray-600">Expires</p>
-                          <p className="font-medium">{new Date(selectedUser.subscription.expires_at).toLocaleDateString()}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
 
                 {/* Recent Activity */}
                 {/* <div>
@@ -607,20 +445,11 @@ export default function UsersPage() {
         )}
 
         {/* User Edit Modal */}
-        {/* <UserEditModal
+        <UserEditModal
           isOpen={editModal.isOpen}
           onClose={() => setEditModal({ isOpen: false, user: null })}
           user={editModal.user}
           onUpdate={handleUserUpdate}
-        /> */}
-
-        {/* Subscription Management Modal */}
-        <SubscriptionModal
-          isOpen={subscriptionModal.isOpen}
-          onClose={() => setSubscriptionModal({ isOpen: false, user: null })}
-          onSubscriptionChange={updateUserSubscription}
-          userId={subscriptionModal.user?.id || ''}
-          currentPlan={subscriptionModal.user?.subscription?.plan_type || 'basic'}
         />
 
         {/* User Invite Modal */}

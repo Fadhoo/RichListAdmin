@@ -6,9 +6,11 @@ export type Booking = {
 	userId?: string;
 	guestCount: number;
 	totalAmount?: number;
+	conciergeId?: string;
 	status: string;
 	paymentId?: string;
 	bookingReference?: string | null;
+	location?: string | null;
 	note?: string | null;
 	createdAt: string;
 	updatedAt: string;

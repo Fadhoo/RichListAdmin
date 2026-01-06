@@ -3,6 +3,7 @@ import AdminLayout from "@/react-app/components/AdminLayout";
 import DataTable, { TableColumn } from "@/react-app/components/DataTable";
 import DeleteConfirmModal from "@/react-app/components/DeleteConfirmModal";
 import StoryEditModal from "@/react-app/components/StoryEditModal";
+import { fetchStoriesAPI, editStory, deleteStory } from "@/react-app/api/stories";
 import { 
   Plus, 
   Eye, 
@@ -15,10 +16,10 @@ import {
   Share,
   Play
 } from "lucide-react";
-import { StoryWithDetails } from "@/shared/types";
+import { Story } from "../types/stories";
 
 export default function StoriesPage() {
-  const [stories, setStories] = useState<StoryWithDetails[]>([]);
+  const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalItems, setTotalItems] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -27,13 +28,13 @@ export default function StoriesPage() {
   const [sortConfig, setSortConfig] = useState<{
     key: string;
     direction: 'asc' | 'desc';
-  } | null>({ key: 'created_at', direction: 'desc' });
+  } | null>({ key: 'createdAt', direction: 'desc' });
   const [filters, setFilters] = useState<Record<string, string>>({});
 
   // Modal states
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [selectedStory, setSelectedStory] = useState<StoryWithDetails | null>(null);
+  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [deletingStory, setDeletingStory] = useState(false);
 
   useEffect(() => {
@@ -55,14 +56,12 @@ export default function StoriesPage() {
         params.append('sort_order', sortConfig.direction);
       }
 
-      const response = await fetch(`/api/admin/stories?${params}`, {
-        credentials: 'include',
-      });
+      const response = await fetchStoriesAPI(currentPage, pageSize, searchTerm, sortConfig ? `${sortConfig.key}:${sortConfig.direction}` : undefined);
 
-      if (response.ok) {
-        const data = await response.json();
-        setStories(data.data || []);
-        setTotalItems(data.pagination?.total || 0);
+      if (response.status === 200) {
+        const data =  response.data;
+        setStories(data.results || []);
+        setTotalItems(data?.totalResults || 0);
       }
     } catch (error) {
       console.error('Failed to fetch stories:', error);
@@ -76,12 +75,12 @@ export default function StoriesPage() {
     setEditModalOpen(true);
   };
 
-  const handleEditStory = (story: StoryWithDetails) => {
+  const handleEditStory = (story: Story) => {
     setSelectedStory(story);
     setEditModalOpen(true);
   };
 
-  const handleDeleteStory = (story: StoryWithDetails) => {
+  const handleDeleteStory = (story: Story) => {
     setSelectedStory(story);
     setDeleteModalOpen(true);
   };
@@ -91,12 +90,9 @@ export default function StoriesPage() {
 
     setDeletingStory(true);
     try {
-      const response = await fetch(`/api/admin/stories/${selectedStory.id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
+      const response = await deleteStory(selectedStory.id);
 
-      if (response.ok) {
+      if (response.status === 200) {
         await fetchStories();
         setDeleteModalOpen(false);
         setSelectedStory(null);
@@ -114,20 +110,11 @@ export default function StoriesPage() {
     setSelectedStory(null);
   };
 
-  const togglePublishStatus = async (story: StoryWithDetails) => {
+  const togglePublishStatus = async (story: Story) => {
     try {
-      const response = await fetch(`/api/admin/stories/${story.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          is_published: !story.is_published,
-        }),
-        credentials: 'include',
-      });
+      const response = await editStory(story._id, { isActive: !story.isActive });
 
-      if (response.ok) {
+      if (response.status === 200) {
         await fetchStories();
       }
     } catch (error) {
@@ -157,7 +144,7 @@ export default function StoriesPage() {
     return colors[type] || 'bg-gray-100 text-gray-800';
   };
 
-  const columns: TableColumn<StoryWithDetails>[] = [
+  const columns: TableColumn<Story>[] = [
     {
       key: 'title',
       title: 'Story',
@@ -165,10 +152,10 @@ export default function StoriesPage() {
       render: (_, story) => (
         <div className="flex items-center space-x-3">
           <div className="flex-shrink-0">
-            {story.media_url ? (
+            {story.media ? (
               <div className="w-12 h-12 rounded-lg overflow-hidden bg-black">
                 <video 
-                  src={story.media_url} 
+                  src={story.media} 
                   className="w-full h-full object-cover"
                   preload="metadata"
                   muted
@@ -204,10 +191,10 @@ export default function StoriesPage() {
       sortable: false,
       render: (_, story) => (
         <div className="flex items-center space-x-2">
-          {story.venue ? (
+          {story.venueId ? (
             <>
               <MapPin className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-900">{story.venue.name}</span>
+              <span className="text-sm text-gray-900">{typeof story.venueId === 'string' ? story.venueId : story.venueId?.name}</span>
             </>
           ) : (
             <span className="text-sm text-gray-500">—</span>
@@ -221,10 +208,10 @@ export default function StoriesPage() {
       sortable: false,
       render: (_, story) => (
         <div className="flex items-center space-x-2">
-          {story.event ? (
+          {story.showId ? (
             <>
               <Calendar className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-900">{story.event.title}</span>
+              <span className="text-sm text-gray-900">{typeof story.showId === 'string' ? story.showId : story.showId?.name}</span>
             </>
           ) : (
             <span className="text-sm text-gray-500">—</span>
@@ -276,10 +263,10 @@ export default function StoriesPage() {
       sortable: true,
       render: (_, story) => (
         <div className="text-sm text-gray-600">
-          {story.publish_date 
-            ? new Date(story.publish_date).toLocaleDateString()
-            : story.is_published 
-              ? new Date(story.created_at).toLocaleDateString()
+          {story.publishedAt 
+            ? new Date(story.publishedAt).toLocaleDateString()
+            : story.publishedAt 
+              ? new Date(story.createdAt).toLocaleDateString()
               : '—'
           }
         </div>

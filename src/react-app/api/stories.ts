@@ -1,62 +1,53 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { AxiosResponse } from "axios";
 import { axiosInstance } from "../hooks/useAxios";
-import { Booking } from "../types/bookings";
-import { GetPaginatedDataResponse } from "../types/apiResponse";
+import { Story } from "../types/stories";
 import { toast } from "react-toastify";
+import { GetPaginatedDataResponse } from "../types/apiResponse";
 
-// // Placeholder Booking type
-// export type Booking = any;
-// export type Booking = any;
-
-export const createBooking = async (data: Booking) => {
-  const url = "/v1/bookings";
+export const createStory = async (data: Omit<Story, '_id' | 'createdAt' | 'updatedAt' | 'views' | 'publishedAt'>) => {
+  const url = "/v1/stories";
   try {
     const response = await axiosInstance().post(url, data);
+    toast.success("Story created successfully");
     return response;
   } catch (error: any) {
     throw new Error(error ? error : "Please check your internet connection");
   }
 };
 
-export const fetchBookings = async (
-  page: number,
-  limit: number,
-  search: string,
-  sortBy = "createdAt:desc"
-) => {
-  const url = "/v1/bookings";
+export const fetchStoriesAPI = async (page: number, limit: number, search: string, sortBy = "createdAt:desc") => {
+  const url = "/v1/stories";
   try {
-    const response: AxiosResponse<GetPaginatedDataResponse<Booking[]>> = await axiosInstance().get(url, {
+    const response: AxiosResponse<GetPaginatedDataResponse<Story[]>> = await axiosInstance().get(url, {
       params: {
         page,
         sortBy,
-        populate: 'showId,showId.venueId,userId,conciergeId',
         limit,
         ...(search ? { search } : {}),
+        populate: 'venueId,showId',
       },
     });
-    return response.data;
-  } catch (error: any) {
-    throw new Error(error ? error : "Please check your internet connection");
-  }
-};
-
-export const editBooking = async (id: string, data: Booking) => {
-  const url = `/v1/bookings/${id}`;
-  try {
-    const response = await axiosInstance().patch(url, data);
-    toast.success("Booking updated successfully");
     return response;
   } catch (error: any) {
     throw new Error(error ? error : "Please check your internet connection");
   }
 };
 
-export const deleteBooking = async (id: string) => {
-  const url = `/v1/bookings/${id}`;
+export const editStory = async (id: string, data: Partial<Story>) => {
+  const url = `/v1/stories/${id}`;
   try {
+    const response = await axiosInstance().patch(url, data);
+    return response;
+  } catch (error: any) {
+    throw new Error(error ? error : "Please check your internet connection");
+  }
+};
+
+export const deleteStory = async (id: string) => {
+  const url = `/v1/stories/${id}`;
+    try {
     const response = await axiosInstance().delete(url);
+    toast.success("Story deleted successfully");
     return response;
   } catch (error: any) {
     throw new Error(error ? error : "Please check your internet connection");
