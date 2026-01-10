@@ -6,6 +6,7 @@ import LoadingSpinner from "./LoadingSpinner";
 interface UserWithWallet {
   _id: string;
   email: string;
+  name: string;
   
   walletId?: {
     _id: number;
@@ -197,7 +198,7 @@ export default function WalletManagementModal({
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">Wallet Management</h2>
-                <p className="text-sm text-gray-600">{user.google_user_data.name}</p>
+                <p className="text-sm text-gray-600">{user.name}</p>
               </div>
             </div>
             <button

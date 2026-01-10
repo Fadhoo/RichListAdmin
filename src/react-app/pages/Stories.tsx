@@ -16,10 +16,10 @@ import {
   Share,
   Play
 } from "lucide-react";
-import { Story } from "../types/stories";
+import { Story, StoryWithDetails } from "../types/stories";
 
 export default function StoriesPage() {
-  const [stories, setStories] = useState<Story[]>([]);
+  const [stories, setStories] = useState<StoryWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalItems, setTotalItems] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -34,12 +34,8 @@ export default function StoriesPage() {
   // Modal states
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+  const [selectedStory, setSelectedStory] = useState<StoryWithDetails | null>(null);
   const [deletingStory, setDeletingStory] = useState(false);
-
-  useEffect(() => {
-    fetchStories();
-  }, [currentPage, pageSize, searchTerm, sortConfig, filters]);
 
   const fetchStories = async () => {
     setLoading(true);
@@ -75,12 +71,12 @@ export default function StoriesPage() {
     setEditModalOpen(true);
   };
 
-  const handleEditStory = (story: Story) => {
+  const handleEditStory = (story: StoryWithDetails) => {
     setSelectedStory(story);
     setEditModalOpen(true);
   };
 
-  const handleDeleteStory = (story: Story) => {
+  const handleDeleteStory = (story: StoryWithDetails) => {
     setSelectedStory(story);
     setDeleteModalOpen(true);
   };
@@ -90,7 +86,7 @@ export default function StoriesPage() {
 
     setDeletingStory(true);
     try {
-      const response = await deleteStory(selectedStory.id);
+      const response = await deleteStory(selectedStory._id);
 
       if (response.status === 200) {
         await fetchStories();
@@ -109,6 +105,11 @@ export default function StoriesPage() {
     setEditModalOpen(false);
     setSelectedStory(null);
   };
+
+  useEffect(() => {
+    fetchStories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, pageSize, searchTerm, sortConfig, filters]);
 
   const togglePublishStatus = async (story: Story) => {
     try {
@@ -172,10 +173,10 @@ export default function StoriesPage() {
               {story.title}
             </p>
             <div className="flex items-center space-x-2 mt-1">
-              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStoryTypeBadgeColor(story.story_type)}`}>
-                {getStoryTypeLabel(story.story_type)}
+              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStoryTypeBadgeColor(story.metadata?.story_type || 'general')}`}>
+                {getStoryTypeLabel(story.metadata?.story_type || 'general')}
               </span>
-              {story.is_featured && (
+              {story.metadata?.is_featured && (
                 <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
                   Featured
                 </span>
@@ -227,15 +228,15 @@ export default function StoriesPage() {
         <div className="flex items-center space-x-4 text-sm text-gray-600">
           <div className="flex items-center space-x-1">
             <Eye className="w-4 h-4" />
-            <span>{story.view_count}</span>
+            <span>{story.views || 0}</span>
           </div>
           <div className="flex items-center space-x-1">
             <Heart className="w-4 h-4" />
-            <span>{story.like_count}</span>
+            <span>{story.metadata?.like_count || 0}</span>
           </div>
           <div className="flex items-center space-x-1">
             <Share className="w-4 h-4" />
-            <span>{story.share_count}</span>
+            <span>{story.metadata?.share_count || 0}</span>
           </div>
         </div>
       ),
@@ -248,12 +249,12 @@ export default function StoriesPage() {
         <button
           onClick={() => togglePublishStatus(story)}
           className={`inline-flex px-3 py-1 text-xs font-medium rounded-full transition-colors ${
-            story.is_published
+            story.metadata?.is_published
               ? 'bg-green-100 text-green-800 hover:bg-green-200'
               : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
           }`}
         >
-          {story.is_published ? 'Published' : 'Draft'}
+          {story.metadata?.is_published ? 'Published' : 'Draft'}
         </button>
       ),
     },

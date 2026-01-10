@@ -8,14 +8,14 @@ import UserActivityModal from "@/react-app/components/UserActivityModal";
 // import WalletManagementModal from "@/react-app/components/WalletManagementModal";
 import DataTable, { TableColumn } from "@/react-app/components/DataTable";
 // import { useServerSideTable } from "@/react-app/hooks/useServerSideTable";
-import { Users, Shield, Activity, CreditCard, Eye, Ban, UserPlus, Settings, UserCheck, Edit, History, Wallet } from "lucide-react";
+import { Users, Shield, Activity, Eye, Ban, UserPlus, UserCheck, Edit, Wallet } from "lucide-react";
 import { useUsers } from "../hooks/useUsers";
 
 // Remove local User definition if not needed, or update imports to use shared types if required elsewhere
 // import type { User } from "@/react-app/types/User";
 
 // Remove local UserWithStats definition and import the shared type instead
-import type { UserWithStats } from "@/react-app/types/UserWithStats";
+import type { UserWithStats } from "@/react-app/types/userWithStats";
 import { editUser } from "../api/users";
 
 // Define table columns
@@ -94,7 +94,8 @@ export default function UsersPage() {
     user: null,
   });
 
-  const [walletModal, setWalletModal] = useState<{ isOpen: boolean; user: UserWithStats | null }>({
+  // Wallet modal state (currently not in use but kept for future implementation)
+  const [, setWalletModal] = useState<{ isOpen: boolean; user: UserWithStats | null }>({
     isOpen: false,
     user: null,
   });
@@ -281,7 +282,7 @@ export default function UsersPage() {
 
         {/* Users Table */}
         <DataTable
-          data={usersResult[0]?.users || []}
+          data={(usersResult[0]?.users || []) as any}
           columns={[
             ...userColumns,
             {
@@ -448,7 +449,7 @@ export default function UsersPage() {
         <UserEditModal
           isOpen={editModal.isOpen}
           onClose={() => setEditModal({ isOpen: false, user: null })}
-          user={editModal.user}
+          user={editModal.user as any}
           onUpdate={handleUserUpdate}
         />
 
@@ -463,7 +464,7 @@ export default function UsersPage() {
         <SubscriptionHistoryModal
           isOpen={subscriptionHistoryModal.isOpen}
           onClose={() => setSubscriptionHistoryModal({ isOpen: false, user: null })}
-          userId={subscriptionHistoryModal.user?.id || ''}
+          userId={subscriptionHistoryModal.user?._id || ''}
           userName={subscriptionHistoryModal.user?.name || 'Unknown User'}
         />
 
@@ -471,7 +472,7 @@ export default function UsersPage() {
         <UserActivityModal
           isOpen={activityModal.isOpen}
           onClose={() => setActivityModal({ isOpen: false, user: null })}
-          userId={activityModal.user?.id || ''}
+          userId={activityModal.user?._id || ''}
           userName={activityModal.user?.name || 'Unknown User'}
         />
 

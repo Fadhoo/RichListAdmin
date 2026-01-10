@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { X, Calendar, MapPin } from "lucide-react";
-import { StoryWithDetails, CreateStory, Venue, Event } from "@/shared/types";
+import { StoryWithDetails, CreateStory } from "@/react-app/types/stories";
+import { Venue } from "@/react-app/types/venue";
+import { Event } from "@/react-app/types/events";
 import VideoUpload from "./VideoUpload";
 
 interface StoryEditModalProps {
@@ -37,19 +39,19 @@ export default function StoryEditModal({ isOpen, onClose, story, onStoryUpdated 
       
       if (story) {
         setFormData({
-          id: story.id,
+          id: story._id ? parseInt(story._id) : undefined,
           title: story.title,
-          content: story.content || '',
-          story_type: story.story_type as any,
-          venue_id: story.venue_id || undefined,
-          event_id: story.event_id || undefined,
-          media_url: story.media_url || '',
+          content: story.metadata?.content || '',
+          story_type: story.metadata?.story_type || 'general',
+          venue_id: typeof story.venueId === 'string' ? parseInt(story.venueId) : undefined,
+          event_id: typeof story.showId === 'string' ? parseInt(story.showId) : undefined,
+          media_url: story.media || '',
           media_type: 'video',
-          is_featured: story.is_featured,
-          is_published: story.is_published,
-          publish_date: story.publish_date ? story.publish_date.split('T')[0] : '',
-          expires_at: story.expires_at ? story.expires_at.split('T')[0] : '',
-          tags: story.tags || '',
+          is_featured: story.metadata?.is_featured || false,
+          is_published: story.metadata?.is_published || false,
+          publish_date: story.publishedAt ? story.publishedAt.split('T')[0] : '',
+          expires_at: story.metadata?.expires_at ? story.metadata.expires_at.split('T')[0] : '',
+          tags: story.tags?.join(', ') || '',
         });
       } else {
         setFormData({
@@ -277,7 +279,7 @@ export default function StoryEditModal({ isOpen, onClose, story, onStoryUpdated 
                   <option value="">Select an event (optional)</option>
                   {events.map(event => (
                     <option key={event.id} value={event.id}>
-                      {event.title}
+                      {event.name}
                     </option>
                   ))}
                 </select>
