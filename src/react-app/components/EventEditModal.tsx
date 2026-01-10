@@ -39,6 +39,7 @@ export default function EventEditModal({
     isFeatured: false,
     isActive: true,
     status: 'pending',
+    soldOut: false,
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -60,6 +61,7 @@ export default function EventEditModal({
         isFeatured: event.isFeatured,
         isActive: event.isActive,
         status: event.status,
+        soldOut: event.soldOut || false,
         // is_house_party: Boolean(event.type === 'house party'),
       });
     }
@@ -340,6 +342,37 @@ export default function EventEditModal({
                   <span className="ml-2">No</span>
                 </label>
               </div>  
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Sold Out
+              </label>
+              <div className="flex items-center space-x-4">
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="soldOut"
+                    value="true"
+                    checked={formData.soldOut === true}
+                    onChange={() => setFormData({ ...formData, soldOut: true })}
+                    className="form-radio text-purple-600"
+                    disabled={loading}
+                  />
+                  <span className="ml-2">Yes</span>
+                </label>
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="soldOut"
+                    value="false"
+                    checked={formData.soldOut === false}
+                    onChange={() => setFormData({ ...formData, soldOut: false })}
+                    className="form-radio text-purple-600"
+                    disabled={loading}
+                  />
+                  <span className="ml-2">No</span>
+                </label>
+              </div>
             </div>
           </div>
 

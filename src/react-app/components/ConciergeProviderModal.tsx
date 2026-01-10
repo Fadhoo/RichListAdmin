@@ -1,12 +1,34 @@
 import { useState, useEffect } from "react";
 import { X, Save, Building2 } from "lucide-react";
-import type { ConciergeServiceProvider, CreateConciergeServiceProvider } from "@/shared/types";
+import { toast } from "react-toastify";
+import type { ConciergeProvider } from "@/react-app/types/conciergeProviders";
+import type { Venue } from "@/react-app/types/venue";
+import { fetchVenues } from "../api/venues";
+import { createConciergeProvider, editConciergeProvider } from "../api/conciergeProviders";
 
 interface ConciergeProviderModalProps {
   isOpen: boolean;
   onClose: () => void;
-  provider: ConciergeServiceProvider | null;
+  provider: ConciergeProvider | null;
   onUpdate: () => void;
+}
+
+interface ProviderFormData {
+  name: string;
+  description?: string;
+  contactEmail: string;
+  contactPhone?: string;
+  address?: string;
+  city?: string;
+  websiteUrl?: string;
+  logoUrl?: string;
+  businessLicense?: string;
+  commissionRate?: number;
+  paymentTerms?: string;
+  specialties?: string;
+  languages?: string;
+  operatingHours?: string;
+  venueId?: string;
 }
 
 export default function ConciergeProviderModal({
@@ -15,82 +37,78 @@ export default function ConciergeProviderModal({
   provider,
   onUpdate,
 }: ConciergeProviderModalProps) {
-  const [formData, setFormData] = useState<CreateConciergeServiceProvider>({
+  const [formData, setFormData] = useState<ProviderFormData>({
     name: '',
     description: '',
-    contact_email: '',
-    contact_phone: '',
+    contactEmail: '',
+    contactPhone: '',
     address: '',
     city: '',
-    website_url: '',
-    logo_url: '',
-    business_license: '',
-    commission_rate: 10,
-    payment_terms: 'net_30',
+    websiteUrl: '',
+    logoUrl: '',
+    businessLicense: '',
+    commissionRate: 10,
+    paymentTerms: 'net_30',
     specialties: '',
     languages: '',
-    operating_hours: '',
-    venue_id: undefined,
+    operatingHours: '',
+    venueId: undefined,
   });
   
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [venues, setVenues] = useState<any[]>([]);
+  const [venues, setVenues] = useState<Venue[]>([]);
 
   useEffect(() => {
     if (isOpen) {
-      fetchVenues();
+      loadVenues();
       if (provider) {
         setFormData({
           name: provider.name,
           description: provider.description || '',
-          contact_email: provider.contact_email,
-          contact_phone: provider.contact_phone || '',
-          address: provider.address || '',
-          city: provider.city || '',
-          website_url: provider.website_url || '',
-          logo_url: provider.logo_url || '',
-          business_license: provider.business_license || '',
-          commission_rate: provider.commission_rate,
-          payment_terms: provider.payment_terms as any,
-          specialties: provider.specialties || '',
-          languages: provider.languages || '',
-          operating_hours: provider.operating_hours || '',
-          venue_id: provider.venue_id || undefined,
+          contactEmail: provider.contactEmail,
+          contactPhone: provider.contactPhone || '',
+          address: provider.metadata?.address || '',
+          city: provider.metadata?.city || '',
+          websiteUrl: provider.metadata?.websiteUrl || '',
+          logoUrl: provider.metadata?.logoUrl || '',
+          businessLicense: provider.metadata?.businessLicense || '',
+          commissionRate: provider.metadata?.commissionRate || 10,
+          paymentTerms: provider.metadata?.paymentTerms || 'net_30',
+          specialties: provider.metadata?.specialties || '',
+          languages: provider.metadata?.languages || '',
+          operatingHours: provider.metadata?.operatingHours || '',
+          venueId: provider.metadata?.venueId || undefined,
         });
       } else {
         setFormData({
           name: '',
           description: '',
-          contact_email: '',
-          contact_phone: '',
+          contactEmail: '',
+          contactPhone: '',
           address: '',
           city: '',
-          website_url: '',
-          logo_url: '',
-          business_license: '',
-          commission_rate: 10,
-          payment_terms: 'net_30',
+          websiteUrl: '',
+          logoUrl: '',
+          businessLicense: '',
+          commissionRate: 10,
+          paymentTerms: 'net_30',
           specialties: '',
           languages: '',
-          operating_hours: '',
-          venue_id: undefined,
+          operatingHours: '',
+          venueId: undefined,
         });
       }
     }
   }, [isOpen, provider]);
 
-  const fetchVenues = async () => {
+  const loadVenues = async () => {
     try {
-      const response = await fetch('/api/admin/venues?limit=100', {
-        credentials: 'include',
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setVenues(data.data || []);
-      }
+      const response = await fetchVenues(1, 100, '');
+      setVenues(response.data.results || []);
     } catch (error) {
       console.error('Failed to fetch venues:', error);
+      toast.error('Failed to load venues');
     }
   };
 
@@ -100,31 +118,43 @@ export default function ConciergeProviderModal({
     setErrors({});
 
     try {
-      const url = provider 
-        ? `/api/admin/concierge/providers/${provider.id}`
-        : '/api/admin/concierge/providers';
-      
-      const method = provider ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
+      // Transform formData to match API expectations
+      const providerData = {
+        ...(provider?.id && { id: provider.id }),
+        name: formData.name,
+        contactEmail: formData.contactEmail,
+        contactPhone: formData.contactPhone,
+        description: formData.description,
+        metadata: {
+          address: formData.address,
+          city: formData.city,
+          websiteUrl: formData.websiteUrl,
+          logoUrl: formData.logoUrl,
+          businessLicense: formData.businessLicense,
+          commissionRate: formData.commissionRate,
+          paymentTerms: formData.paymentTerms,
+          specialties: formData.specialties,
+          languages: formData.languages,
+          operatingHours: formData.operatingHours,
+          venueId: formData.venueId,
         },
-        credentials: 'include',
-        body: JSON.stringify(formData),
-      });
+      } as ConciergeProvider;
 
-      if (response.ok) {
-        onUpdate();
-        onClose();
+      if (provider) {
+        await editConciergeProvider(provider.id, providerData);
+        toast.success('Provider updated successfully');
       } else {
-        const error = await response.json();
-        setErrors({ general: error.error || 'Failed to save provider' });
+        await createConciergeProvider(providerData);
+        toast.success('Provider created successfully');
       }
+
+      onUpdate();
+      onClose();
     } catch (error) {
       console.error('Failed to save provider:', error);
-      setErrors({ general: 'Failed to save provider' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save provider';
+      setErrors({ general: errorMessage });
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -196,8 +226,8 @@ export default function ConciergeProviderModal({
                 <input
                   type="email"
                   required
-                  value={formData.contact_email}
-                  onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                  value={formData.contactEmail}
+                  onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="contact@luxuryconcierge.com"
                   disabled={loading}
@@ -210,8 +240,8 @@ export default function ConciergeProviderModal({
                 </label>
                 <input
                   type="tel"
-                  value={formData.contact_phone}
-                  onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                  value={formData.contactPhone}
+                  onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="+234 xxx xxx xxxx"
                   disabled={loading}
@@ -273,8 +303,8 @@ export default function ConciergeProviderModal({
                 </label>
                 <input
                   type="url"
-                  value={formData.website_url}
-                  onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
+                  value={formData.websiteUrl}
+                  onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="https://luxuryconcierge.com"
                   disabled={loading}
@@ -287,8 +317,8 @@ export default function ConciergeProviderModal({
                 </label>
                 <input
                   type="url"
-                  value={formData.logo_url}
-                  onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
+                  value={formData.logoUrl}
+                  onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="https://example.com/logo.png"
                   disabled={loading}
@@ -311,10 +341,10 @@ export default function ConciergeProviderModal({
                   min="0"
                   max="100"
                   step="0.1"
-                  value={formData.commission_rate}
+                  value={formData.commissionRate}
                   onChange={(e) => setFormData({ 
                     ...formData, 
-                    commission_rate: parseFloat(e.target.value) || 0 
+                    commissionRate: parseFloat(e.target.value) || 0 
                   })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="10.0"
@@ -327,8 +357,8 @@ export default function ConciergeProviderModal({
                   Payment Terms
                 </label>
                 <select
-                  value={formData.payment_terms}
-                  onChange={(e) => setFormData({ ...formData, payment_terms: e.target.value as any })}
+                  value={formData.paymentTerms}
+                  onChange={(e) => setFormData({ ...formData, paymentTerms: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   disabled={loading}
                 >
@@ -347,8 +377,8 @@ export default function ConciergeProviderModal({
               </label>
               <input
                 type="text"
-                value={formData.business_license}
-                onChange={(e) => setFormData({ ...formData, business_license: e.target.value })}
+                value={formData.businessLicense}
+                onChange={(e) => setFormData({ ...formData, businessLicense: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="Business registration/license number"
                 disabled={loading}
@@ -360,10 +390,10 @@ export default function ConciergeProviderModal({
                 Assigned Venue
               </label>
               <select
-                value={formData.venue_id || ''}
+                value={formData.venueId || ''}
                 onChange={(e) => setFormData({ 
                   ...formData, 
-                  venue_id: e.target.value ? parseInt(e.target.value) : undefined 
+                  venueId: e.target.value || undefined 
                 })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 disabled={loading}
@@ -417,8 +447,8 @@ export default function ConciergeProviderModal({
                 </label>
                 <input
                   type="text"
-                  value={formData.operating_hours}
-                  onChange={(e) => setFormData({ ...formData, operating_hours: e.target.value })}
+                  value={formData.operatingHours}
+                  onChange={(e) => setFormData({ ...formData, operatingHours: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="24/7, Mon-Fri 9AM-6PM, etc."
                   disabled={loading}

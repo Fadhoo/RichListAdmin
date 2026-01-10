@@ -15,6 +15,7 @@ export type Event = {
 	imageId?: string | null;
 	status: string;
 	tags?: string[] | null;
+	soldOut: boolean;
     type: string;
     isActive: boolean;
     typeOfShow: string;
@@ -37,6 +38,7 @@ export type CreateEvent = {
 	totalTickets?: number | null;
 	imageId?: string | null;
 	status?: string;
+	soldOut?: boolean;
 	isFeatured: boolean;
 	tags?: string[] | null;
     type: string;

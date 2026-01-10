@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import { X, Save, Settings } from "lucide-react";
-import type { ConciergeService, CreateConciergeService } from "@/shared/types";
+import { toast } from "react-toastify";
+import type { ConciergeService } from "@/react-app/types/conciergeServices";
+import type { ConciergeProvider } from "@/react-app/types/conciergeProviders";
+// import type { Venue } from "@/react-app/types/venue";
+import { fetchConciergeProviders } from "../api/conciergeProviders";
+// import { fetchVenues } from "../api/venues";
+import { createConciergeService, editConciergeService } from "../api/conciergeServices";
+import ImageUpload from "@/react-app/components/ImageUpload";
 
 interface ConciergeServiceModalProps {
   isOpen: boolean;
@@ -9,92 +16,111 @@ interface ConciergeServiceModalProps {
   onUpdate: () => void;
 }
 
+interface ServiceFormData {
+  name: string;
+  description?: string;
+  category?: string;
+  price?: number;
+  currency?: string;
+  priceType?: string;
+  durationMinutes?: number;
+  conciergeId?: string;
+  venueId?: string;
+  requirements?: string;
+  maxCapacity?: number;
+  advanceBookingHours?: number;
+  isActive?: boolean;
+  imageId?: string;
+}
+
 export default function ConciergeServiceModal({
   isOpen,
   onClose,
   service,
   onUpdate,
-}: ConciergeServiceModalProps) {
-  const [formData, setFormData] = useState<CreateConciergeService>({
+  providerId,
+}: ConciergeServiceModalProps & { providerId?: string }) {
+  const [formData, setFormData] = useState<ServiceFormData>({
     name: '',
     description: '',
     category: '',
-    base_price: undefined,
-    price_type: 'fixed',
-    duration_minutes: undefined,
-    provider_id: undefined,
-    venue_id: undefined,
+    price: undefined,
+    currency: 'NGN',
+    priceType: 'fixed',
+    durationMinutes: undefined,
+    conciergeId: providerId,
+    venueId: undefined,
     requirements: '',
-    max_capacity: undefined,
-    advance_booking_hours: 24,
+    maxCapacity: undefined,
+    advanceBookingHours: 24,
+    isActive: true,
+    imageId: '',
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [venues, setVenues] = useState<any[]>([]);
-  const [providers, setProviders] = useState<any[]>([]);
+  // const [venues, setVenues] = useState<Venue[]>([]);
+  const [providers, setProviders] = useState<ConciergeProvider[]>([]);
 
   useEffect(() => {
     if (isOpen) {
-      fetchVenues();
-      fetchProviders();
+      // loadVenues();
+      loadProviders();
       if (service) {
         setFormData({
           name: service.name,
           description: service.description || '',
-          category: service.category,
-          base_price: service.base_price || undefined,
-          price_type: service.price_type as any,
-          duration_minutes: service.duration_minutes || undefined,
-          provider_id: service.provider_id || undefined,
-          venue_id: service.venue_id || undefined,
-          requirements: service.requirements || '',
-          max_capacity: service.max_capacity || undefined,
-          advance_booking_hours: service.advance_booking_hours,
+          category: service.category || '',
+          price: service.price || undefined,
+          currency: service.currency || 'NGN',
+          priceType: service.metadata?.priceType || 'fixed',
+          durationMinutes: service.metadata?.durationMinutes || undefined,
+          conciergeId: service.conciergeId || providerId,
+          venueId: service.metadata?.venueId || undefined,
+          requirements: service.metadata?.requirements || '',
+          maxCapacity: service.metadata?.maxCapacity || undefined,
+          advanceBookingHours: service.metadata?.advanceBookingHours || 24,
+          isActive: service.isActive ?? true,
+          imageId: service.imageId || '',
         });
       } else {
         setFormData({
           name: '',
           description: '',
           category: '',
-          base_price: undefined,
-          price_type: 'fixed',
-          duration_minutes: undefined,
-          provider_id: undefined,
-          venue_id: undefined,
+          price: undefined,
+          currency: 'NGN',
+          priceType: 'fixed',
+          durationMinutes: undefined,
+          conciergeId: providerId,
+          venueId: undefined,
           requirements: '',
-          max_capacity: undefined,
-          advance_booking_hours: 24,
+          maxCapacity: undefined,
+          advanceBookingHours: 24,
+          isActive: true,
+          imageId: '',
         });
       }
     }
-  }, [isOpen, service]);
+  }, [isOpen, service, providerId]);
 
-  const fetchVenues = async () => {
-    try {
-      const response = await fetch('/api/admin/venues?limit=100', {
-        credentials: 'include',
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setVenues(data.data || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch venues:', error);
-    }
-  };
+  // const loadVenues = async () => {
+  //   try {
+  //     const response = await fetchVenues(1, 100, '');
+  //     setVenues(response.data.results || []);
+  //   } catch (error) {
+  //     console.error('Failed to fetch venues:', error);
+  //     toast.error('Failed to load venues');
+  //   }
+  // };
 
-  const fetchProviders = async () => {
+  const loadProviders = async () => {
     try {
-      const response = await fetch('/api/admin/concierge/providers?limit=100', {
-        credentials: 'include',
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setProviders(data.data || []);
-      }
+      const response = await fetchConciergeProviders(1, 100, '');
+      setProviders(response.data.results || []);
     } catch (error) {
       console.error('Failed to fetch providers:', error);
+      toast.error('Failed to load providers');
     }
   };
 
@@ -104,31 +130,41 @@ export default function ConciergeServiceModal({
     setErrors({});
 
     try {
-      const url = service 
-        ? `/api/admin/concierge/services/${service.id}`
-        : '/api/admin/concierge/services';
-      
-      const method = service ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
+      // Transform formData to match API expectations
+      const serviceData: Omit<ConciergeService, 'id' | 'createdAt' | 'updatedAt'> = {
+        name: formData.name,
+        description: formData.description,
+        category: formData.category,
+        price: formData.price,
+        currency: formData.currency,
+        conciergeId: formData.conciergeId || '',
+        isActive: formData.isActive,
+        imageId: formData.imageId,
+        metadata: {
+          priceType: formData.priceType,
+          durationMinutes: formData.durationMinutes,
+          venueId: formData.venueId,
+          requirements: formData.requirements,
+          maxCapacity: formData.maxCapacity,
+          advanceBookingHours: formData.advanceBookingHours,
         },
-        credentials: 'include',
-        body: JSON.stringify(formData),
-      });
+      };
 
-      if (response.ok) {
-        onUpdate();
-        onClose();
+      if (service) {
+        await editConciergeService(service.id, serviceData);
+        toast.success('Service updated successfully');
       } else {
-        const error = await response.json();
-        setErrors({ general: error.error || 'Failed to save service' });
+        await createConciergeService(serviceData);
+        toast.success('Service created successfully');
       }
+
+      onUpdate();
+      onClose();
     } catch (error) {
       console.error('Failed to save service:', error);
-      setErrors({ general: 'Failed to save service' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save service';
+      setErrors({ general: errorMessage });
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -147,12 +183,12 @@ export default function ConciergeServiceModal({
     { value: 'other', label: 'Other Services' },
   ];
 
-  const priceTypes = [
-    { value: 'fixed', label: 'Fixed Price' },
-    { value: 'hourly', label: 'Per Hour' },
-    { value: 'per_person', label: 'Per Person' },
-    { value: 'custom', label: 'Custom Pricing' },
-  ];
+  // const priceTypes = [
+  //   { value: 'fixed', label: 'Fixed Price' },
+  //   { value: 'hourly', label: 'Per Hour' },
+  //   { value: 'per_person', label: 'Per Person' },
+  //   { value: 'custom', label: 'Custom Pricing' },
+  // ];
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -178,6 +214,9 @@ export default function ConciergeServiceModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {providerId && (
+            <div className="mb-2 text-xs text-blue-600">Provider: {providers.find(p => p.id === providerId)?.name || providerId}</div>
+          )}
           {errors.general && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
               {errors.general}
@@ -245,10 +284,10 @@ export default function ConciergeServiceModal({
               </label>
               <select
                 required
-                value={formData.provider_id || ''}
+                value={formData.conciergeId || ''}
                 onChange={(e) => setFormData({ 
                   ...formData, 
-                  provider_id: e.target.value ? parseInt(e.target.value) : undefined 
+                  conciergeId: e.target.value || undefined 
                 })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 disabled={loading}
@@ -262,15 +301,15 @@ export default function ConciergeServiceModal({
               </select>
             </div>
 
-            <div>
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Venue Assignment
               </label>
               <select
-                value={formData.venue_id || ''}
+                value={formData.venueId || ''}
                 onChange={(e) => setFormData({ 
                   ...formData, 
-                  venue_id: e.target.value ? parseInt(e.target.value) : undefined 
+                  venueId: e.target.value || undefined 
                 })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 disabled={loading}
@@ -282,11 +321,11 @@ export default function ConciergeServiceModal({
                   </option>
                 ))}
               </select>
-            </div>
+            </div> */}
           </div>
 
           {/* Pricing & Logistics */}
-          <div className="space-y-4">
+          {/* <div className="space-y-4">
             <h3 className="text-lg font-medium text-gray-900">Pricing & Logistics</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -295,8 +334,8 @@ export default function ConciergeServiceModal({
                   Price Type
                 </label>
                 <select
-                  value={formData.price_type}
-                  onChange={(e) => setFormData({ ...formData, price_type: e.target.value as any })}
+                  value={formData.priceType}
+                  onChange={(e) => setFormData({ ...formData, priceType: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   disabled={loading}
                 >
@@ -316,10 +355,10 @@ export default function ConciergeServiceModal({
                   type="number"
                   min="0"
                   step="100"
-                  value={formData.base_price || ''}
+                  value={formData.price || ''}
                   onChange={(e) => setFormData({ 
                     ...formData, 
-                    base_price: e.target.value ? parseFloat(e.target.value) : undefined 
+                    price: e.target.value ? parseFloat(e.target.value) : undefined 
                   })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="50000"
@@ -334,10 +373,10 @@ export default function ConciergeServiceModal({
                 <input
                   type="number"
                   min="1"
-                  value={formData.duration_minutes || ''}
+                  value={formData.durationMinutes || ''}
                   onChange={(e) => setFormData({ 
                     ...formData, 
-                    duration_minutes: e.target.value ? parseInt(e.target.value) : undefined 
+                    durationMinutes: e.target.value ? parseInt(e.target.value) : undefined 
                   })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="120"
@@ -352,10 +391,10 @@ export default function ConciergeServiceModal({
                 <input
                   type="number"
                   min="1"
-                  value={formData.max_capacity || ''}
+                  value={formData.maxCapacity || ''}
                   onChange={(e) => setFormData({ 
                     ...formData, 
-                    max_capacity: e.target.value ? parseInt(e.target.value) : undefined 
+                    maxCapacity: e.target.value ? parseInt(e.target.value) : undefined 
                   })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   placeholder="8"
@@ -371,10 +410,10 @@ export default function ConciergeServiceModal({
               <input
                 type="number"
                 min="0"
-                value={formData.advance_booking_hours}
+                value={formData.advanceBookingHours}
                 onChange={(e) => setFormData({ 
                   ...formData, 
-                  advance_booking_hours: parseInt(e.target.value) || 0 
+                  advanceBookingHours: parseInt(e.target.value) || 0 
                 })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="24"
@@ -394,6 +433,35 @@ export default function ConciergeServiceModal({
                 placeholder="Valid ID required, dress code: smart casual..."
                 disabled={loading}
               />
+            </div>
+          </div> */}
+
+          {/* Service Image */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Service Image
+            </label>
+            <ImageUpload
+              onUpload={(url) => setFormData({ ...formData, imageId: url })}
+              currentImage={formData.imageId}
+              maxSizeMB={10}
+            />
+          </div>
+
+          {/* Availability */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                id="isActive"
+                checked={formData.isActive ?? true}
+                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                disabled={loading}
+              />
+              <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
+                Available (Service is active and can be booked)
+              </label>
             </div>
           </div>
 

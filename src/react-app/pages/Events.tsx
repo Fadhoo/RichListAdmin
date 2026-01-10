@@ -125,6 +125,18 @@ const eventColumns: TableColumn<EventWithVenue>[] = [
     ),
   },
   {
+    key: 'soldOut',
+    title: 'Sold Out',
+    sortable: true,
+    render: (soldOut) => (
+      <span>
+        {soldOut ? 'Yes' : 'No'}<span>{soldOut ? <XCircle className="w-4 h-4 text-red-500" /> : <CheckCircle className="w-4 h-4 text-green-500" />}</span>
+      </span>
+      // Additional styling can be added here
+      
+    ),
+  },
+  {
     key: 'status',
     title: 'Status',
     sortable: true,
