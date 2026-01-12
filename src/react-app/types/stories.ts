@@ -35,8 +35,8 @@ export interface CreateStory {
   title: string;
   content?: string;
   story_type: string;
-  venue_id?: number;
-  event_id?: number;
+  venue_id?: string;
+  event_id?: string;
   media_url: string;
   media_type: 'video';
   is_featured?: boolean;

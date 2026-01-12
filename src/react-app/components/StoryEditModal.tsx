@@ -1,8 +1,13 @@
-import { useState, useEffect } from "react";
-import { X, Calendar, MapPin } from "lucide-react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect, useRef } from "react";
+import { X, MapPin } from "lucide-react";
 import { StoryWithDetails, CreateStory } from "@/react-app/types/stories";
 import { Venue } from "@/react-app/types/venue";
-import { Event } from "@/react-app/types/events";
+// import { Event } from "@/react-app/types/events";
+import { fetchVenues } from "../api/venues";
+import { editStory, createStory, deleteStory } from "../api/stories";
+// import { fetchEvents } from "../api/events";
+import { useToast } from "@/react-app/contexts/ToastContext";
 import VideoUpload from "./VideoUpload";
 
 interface StoryEditModalProps {
@@ -13,11 +18,16 @@ interface StoryEditModalProps {
 }
 
 export default function StoryEditModal({ isOpen, onClose, story, onStoryUpdated }: StoryEditModalProps) {
+  const { showSuccessToast, showErrorToast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
+  // const [events, setEvents] = useState<Event[]>([]);
+  const [venueSearchTerm, setVenueSearchTerm] = useState('');
+  const [showVenueDropdown, setShowVenueDropdown] = useState(false);
+  const venueDropdownRef = useRef<HTMLDivElement>(null);
   
-  const [formData, setFormData] = useState<Partial<CreateStory & { id?: number; is_published?: boolean }>>({
+  const [formData, setFormData] = useState<Partial<CreateStory & { id?: number; is_published?: boolean; venue_id?: string; event_id?: string }>>({
     title: '',
     content: '',
     story_type: 'general',
@@ -34,8 +44,8 @@ export default function StoryEditModal({ isOpen, onClose, story, onStoryUpdated 
 
   useEffect(() => {
     if (isOpen) {
-      fetchVenues();
-      fetchEvents();
+      loadVenues();
+      // loadEvents();
       
       if (story) {
         setFormData({
@@ -43,8 +53,10 @@ export default function StoryEditModal({ isOpen, onClose, story, onStoryUpdated 
           title: story.title,
           content: story.metadata?.content || '',
           story_type: story.metadata?.story_type || 'general',
-          venue_id: typeof story.venueId === 'string' ? parseInt(story.venueId) : undefined,
-          event_id: typeof story.showId === 'string' ? parseInt(story.showId) : undefined,
+          venue_id: typeof story.venueId === 'object' && story.venueId !== null
+            ? (story.venueId as Venue).id?.toString()
+            : (typeof story.venueId === 'string' ? story.venueId : undefined),
+          // event_id: story.showId || undefined,
           media_url: story.media || '',
           media_type: 'video',
           is_featured: story.metadata?.is_featured || false,
@@ -72,76 +84,82 @@ export default function StoryEditModal({ isOpen, onClose, story, onStoryUpdated 
     }
   }, [isOpen, story]);
 
-  const fetchVenues = async () => {
-    try {
-      const response = await fetch('/api/admin/venues?limit=100', {
-        credentials: 'include',
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setVenues(data.data || []);
+  // Close venue dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (venueDropdownRef.current && !venueDropdownRef.current.contains(event.target as Node)) {
+        setShowVenueDropdown(false);
       }
-    } catch (error) {
+    };
+
+    if (showVenueDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showVenueDropdown]);
+
+  const loadVenues = async () => {
+    try {
+      const response = await fetchVenues(1, 10000, '', undefined);
+      setVenues(response.data.results || []);
+    } catch (error: any) {
       console.error('Failed to fetch venues:', error);
+      showErrorToast(error.message || 'Failed to load venues');
     }
   };
 
-  const fetchEvents = async () => {
-    try {
-      const response = await fetch('/api/admin/events?limit=100', {
-        credentials: 'include',
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setEvents(data.data || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch events:', error);
-    }
-  };
+  // const loadEvents = async () => {
+  //   try {
+  //     const response = await fetchEvents(1, 100, '', 'createdAt:desc');
+  //     setEvents(response.results || []);
+  //   } catch (error: any) {
+  //     console.error('Failed to fetch events:', error);
+  //     showErrorToast(error.message || 'Failed to load events');
+  //   }
+  // };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const endpoint = story 
-        ? `/api/admin/stories/${story.id}`
-        : '/api/admin/stories';
-      
-      const method = story ? 'PUT' : 'POST';
-      
-      const submitData = { ...formData };
-      delete submitData.id;
-
-      // Convert empty strings to null for optional fields
-      if (!submitData.venue_id) submitData.venue_id = undefined;
-      if (!submitData.event_id) submitData.event_id = undefined;
-      if (!submitData.media_url) submitData.media_url = undefined;
-      if (!submitData.publish_date) submitData.publish_date = undefined;
-      if (!submitData.expires_at) submitData.expires_at = undefined;
-      if (!submitData.tags) submitData.tags = undefined;
-      
-      // Set media_type to video
-      submitData.media_type = 'video';
-
-      const response = await fetch(endpoint, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
+      const submitData: any = {
+        title: formData.title || '',
+        metadata: {
+          content: formData.content || '',
+          story_type: formData.story_type || 'general',
+          is_featured: formData.is_featured || false,
+          is_published: formData.is_published || false,
+          expires_at: formData.expires_at || undefined,
         },
-        body: JSON.stringify(submitData),
-        credentials: 'include',
-      });
+        media: formData.media_url || '',
+        tags: formData.tags ? formData.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
+        publishedAt: formData.publish_date || undefined,
+      };
 
-      if (response.ok) {
-        onStoryUpdated();
-      } else {
-        const errorData = await response.json();
-        console.error('Failed to save story:', errorData);
+      // Add optional venue and event IDs
+      if (formData.venue_id) {
+        submitData.venueId = formData.venue_id;
       }
-    } catch (error) {
+      if (formData.event_id) {
+        submitData.showId = formData.event_id;
+      }
+
+      if (story && story._id) {
+        // Update existing story
+        await editStory(story._id, submitData);
+        showSuccessToast('Story updated successfully');
+      } else {
+        // Create new story
+        await createStory(submitData);
+        showSuccessToast('Story created successfully');
+      }
+      
+      onStoryUpdated();
+      onClose();
+    } catch (error: any) {
       console.error('Failed to save story:', error);
+      showErrorToast(error.message || 'Failed to save story');
     } finally {
       setLoading(false);
     }
@@ -154,6 +172,27 @@ export default function StoryEditModal({ isOpen, onClose, story, onStoryUpdated 
     }));
   };
 
+  const handleDelete = async () => {
+    if (!story || !story._id) return;
+    
+    if (!confirm('Are you sure you want to delete this story? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeleteLoading(true);
+    try {
+      await deleteStory(story._id);
+      showSuccessToast('Story deleted successfully');
+      onStoryUpdated();
+      onClose();
+    } catch (error: any) {
+      console.error('Failed to delete story:', error);
+      showErrorToast(error.message || 'Failed to delete story');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const storyTypes = [
     { value: 'general', label: 'General' },
     { value: 'venue_highlight', label: 'Venue Highlight' },
@@ -162,7 +201,13 @@ export default function StoryEditModal({ isOpen, onClose, story, onStoryUpdated 
     { value: 'user_generated', label: 'User Generated' },
   ];
 
-  
+  // Filter venues based on search term
+  const filteredVenues = venues.filter(venue =>
+    venue.name.toLowerCase().includes(venueSearchTerm.toLowerCase())
+  );
+
+  // Get selected venue name
+  const selectedVenue = venues.find(v => v.id === formData.venue_id);
 
   if (!isOpen) return null;
 
@@ -252,21 +297,74 @@ export default function StoryEditModal({ isOpen, onClose, story, onStoryUpdated 
                   <MapPin className="w-4 h-4 inline mr-1" />
                   Associated Venue
                 </label>
-                <select
-                  value={formData.venue_id || ''}
-                  onChange={(e) => handleInputChange('venue_id', e.target.value ? parseInt(e.target.value) : undefined)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                >
-                  <option value="">Select a venue (optional)</option>
-                  {venues.map(venue => (
-                    <option key={venue.id} value={venue.id}>
-                      {venue.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative" ref={venueDropdownRef}>
+                  <input
+                    type="text"
+                    value={selectedVenue ? selectedVenue.name : venueSearchTerm}
+                    onChange={(e) => {
+                      setVenueSearchTerm(e.target.value);
+                      setShowVenueDropdown(true);
+                      if (!e.target.value) {
+                        handleInputChange('venue_id', undefined);
+                      }
+                    }}
+                    onFocus={() => setShowVenueDropdown(true)}
+                    placeholder="Search for a venue (optional)"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                  {selectedVenue && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleInputChange('venue_id', undefined);
+                        setVenueSearchTerm('');
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                  {showVenueDropdown && !selectedVenue && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {filteredVenues.length > 0 ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleInputChange('venue_id', undefined);
+                              setVenueSearchTerm('');
+                              setShowVenueDropdown(false);
+                            }}
+                            className="w-full text-left px-3 py-2 hover:bg-gray-100 text-gray-500 italic border-b"
+                          >
+                            No venue (optional)
+                          </button>
+                          {filteredVenues.map(venue => (
+                            <button
+                              key={venue.id}
+                              type="button"
+                              onClick={() => {
+                                handleInputChange('venue_id', venue.id.toString());
+                                setVenueSearchTerm('');
+                                setShowVenueDropdown(false);
+                              }}
+                              className="w-full text-left px-3 py-2 hover:bg-gray-100 focus:bg-gray-100"
+                            >
+                              {venue.name}
+                            </button>
+                          ))}
+                        </>
+                      ) : (
+                        <div className="px-3 py-2 text-gray-500 italic">
+                          No venues found
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Calendar className="w-4 h-4 inline mr-1" />
                   Associated Event
@@ -283,7 +381,7 @@ export default function StoryEditModal({ isOpen, onClose, story, onStoryUpdated 
                     </option>
                   ))}
                 </select>
-              </div>
+              </div> */}
 
               {/* Media Upload */}
               <div>
@@ -298,7 +396,7 @@ export default function StoryEditModal({ isOpen, onClose, story, onStoryUpdated 
               </div>
 
               {/* Publishing Settings */}
-              <div className="space-y-4 border-t pt-6">
+              {/* <div className="space-y-4 border-t pt-6">
                 <div className="flex items-center space-x-4">
                   <label className="flex items-center space-x-2">
                     <input
@@ -346,23 +444,41 @@ export default function StoryEditModal({ isOpen, onClose, story, onStoryUpdated 
                     />
                   </div>
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+          <div className="flex justify-between items-center pt-6 border-t border-gray-200">
+            {story && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleteLoading || loading}
+                className="px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 flex items-center space-x-2"
+              >
+                {deleteLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-red-700 border-t-transparent rounded-full animate-spin"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <span>Delete Story</span>
+                )}
+              </button>
+            )}
+            <div className="flex space-x-3 ml-auto">
             <button
               type="button"
               onClick={onClose}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              disabled={loading}
+              disabled={loading || deleteLoading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading || !formData.title?.trim() || !formData.media_url?.trim()}
+              disabled={loading || deleteLoading || !formData.title?.trim() || !formData.media_url?.trim()}
               className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
             >
               {loading ? (
@@ -374,6 +490,7 @@ export default function StoryEditModal({ isOpen, onClose, story, onStoryUpdated 
                 <span>{story ? 'Update Story' : 'Create Story'}</span>
               )}
             </button>
+            </div>
           </div>
         </form>
       </div>

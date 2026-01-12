@@ -1,93 +1,146 @@
 # RichList Admin - AI Coding Agent Instructions
 
 ## Project Overview
-RichList Admin is a **React + TypeScript admin dashboard** that communicates with an external API backend. The project uses Mocha framework tooling and integrates with Mocha's authentication service.
+RichList Admin is a **React + TypeScript admin dashboard** for managing venues, events, bookings, stories, and concierge services. Built with Mocha framework tooling.
 
 **Key Architecture:** 
-- Frontend: React 19, Vite, TanStack Query, Redux Toolkit, Tailwind CSS
-- Backend: External API (configured via `VITE_BASE_URL`)
-- Auth: @getmocha/users-service for OAuth/session management
-- Deployment: Static SPA (Vercel or similar)
+- Frontend: React 19, Vite, TanStack Query, Tailwind CSS
+- Backend: External REST API (configured via `VITE_BASE_URL` env variable)
+- Auth: @getmocha/users-service for Google OAuth + session management
+- Deployment: Static SPA (Vercel)
 
-**Note:** `src/worker/index.ts` is **deprecated** - the codebase uses an external backend API.
+**Critical:** `src/worker/index.ts` contains the **deprecated Cloudflare Workers backend** (Hono + D1). The app now uses an external Node.js API. The worker file is kept for reference only.
 
 ## Critical Patterns
 
-### 1. Single Page Application
-- **Entry point:** `src/react-app/main.tsx` → routes defined in `App.tsx`
-- **API communication:** All endpoints accessed via `VITE_BASE_URL` environment variable
-- Static build deployed as SPA with client-side routing
-
-### 2. Data Fetching Strategy
-**Use custom hooks, NOT direct API calls in components:**
+### 1. Data Fetching with Custom Hooks
+**Always use domain-specific hooks, NOT direct API calls in components:**
 ```typescript
-// ✅ Correct: Use domain-specific hooks
+// ✅ Correct: Use custom hooks that encapsulate fetching logic
 import { useUsers } from '@/react-app/hooks/useUsers';
 const [state, actions] = useUsers({ initialPageSize: 25 });
 
-// ❌ Avoid: Direct axios calls in components
+// ❌ Wrong: Direct API calls in components
+import { fetchUsers } from '@/react-app/api/users';
+const data = await fetchUsers(1, 25, '');
 ```
 
-**Hook pattern (see `useUsers.ts`, `useVenues.ts`, etc.):**
-- Return `[state, actions]` tuple
-- State includes `{ data, loading, error, currentPage, pageSize, searchTerm, sortConfig }`
-- Actions include `{ refresh, setPage, setSearch, setSort, setFilters, exportData }`
-- Server-side pagination/search is the default
+**Hook pattern structure:**
+- Return tuple: `[state, actions]`
+- State: `{ data, loading, error, totalItems, currentPage, pageSize, searchTerm, sortConfig, filters }`
+- Actions: `{ refresh, setPage, setPageSize, setSearch, setSort, setFilters, exportData }`
+- Examples: `useUsers`, `useVenues`, `useEvents`, `useStories`, `useBooking`
 
-### 3. API Layer Structure
-All API functions live in `src/react-app/api/` and use the centralized axios instance:
+### 2. API Client Layer
+All API functions in `src/react-app/api/` use the centralized axios instance:
 
 ```typescript
 import { axiosInstance } from '../hooks/useAxios';
-const response = await axiosInstance().get('/v1/users');
+const response = await axiosInstance().get('/v1/users', { 
+  params: { page, limit, search, sortBy: 'createdAt:desc' }
+});
 ```
 
-**Axios instance features (useAxios.ts):**
-- Auto-injects `Bearer ${token}` from localStorage
-- Base URL from `VITE_BASE_URL` env variable (points to external backend)
-- Handles 401 → auto-logout via `logout()` from `lib/localStorage.ts`
-- Transforms 500 errors to generic "Server error"
+**Key axios features:**
+- Auto-injects `Bearer ${token}` from localStorage (`tkn` key)
+- Base URL from `VITE_BASE_URL` environment variable
+- Intercepts 401 → triggers `logout()` (clears localStorage + redirects to `/login`)
+- Transforms 500 errors to generic "Server error" message
+- Timeout: 5 minutes (300000ms)
 
-**Important:** The backend API is external and separate from this codebase.
+### 3. Modal-Driven CRUD Operations
+All create/edit operations use modals, not separate pages:
 
-### 4. Modal-Driven CRUD
-All create/edit operations use modals (not separate pages):
-- `VenueEditModal.tsx`, `UserEditModal.tsx`, `EventEditModal.tsx`, etc.
-- Modals receive `isOpen`, `onClose`, `onSuccess`, and optional `initialData` props
-- On success, modals call `onSuccess()` to trigger parent refresh + close modal
+**Modal naming convention:** `{Entity}EditModal.tsx` (e.g., `VenueEditModal`, `UserEditModal`, `EventEditModal`)
 
-### 5. Toast Notifications
+**Standard modal props:**
+```typescript
+interface EditModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  initialData?: Entity;  // Optional: undefined for create, provided for edit
+}
+```
+
+**Modal workflow:**
+1. Parent page manages modal state with `useState<boolean>`
+2. Parent passes `onSuccess` callback that calls `actions.refresh()` from custom hook
+3. Modal validates with Zod schema, calls API function, shows toast, then calls `onSuccess()`
+4. Modal closes after successful operation
+
+### 4. Toast Notification System
 **Use ToastContext, NOT react-toastify directly:**
 
 ```typescript
 import { useToast } from '@/react-app/contexts/ToastContext';
 const { showSuccessToast, showErrorToast } = useToast();
 
-// Then use in try/catch:
-showSuccessToast('User updated successfully');
-showErrorToast('Failed to save changes');
+// In try/catch blocks:
+try {
+  await updateUser(id, data);
+  showSuccessToast('User updated successfully');
+  onSuccess();
+} catch (error) {
+  showErrorToast(error.message || 'Failed to update user');
+}
 ```
 
-Toast types: `success`, `error`, `info`, `warning`
+Available toast types: `showSuccessToast`, `showErrorToast`, `showInfoToast`, `showWarningToast`
 
-### 6. DataTable Component
-The reusable `DataTable.tsx` supports:
-- **Server-side mode:** Pass `totalItems`, `currentPage`, pagination handlers
-- **Client-side mode:** Pass just `data`, component handles filtering/sorting
-- Built-in search, sort, filter, export functionality
-- Define columns with `key`, `title`, `sortable`, `render` function
+### 5. DataTable Component Pattern
+The reusable `DataTable.tsx` component is central to all list pages. It automatically detects whether to use server-side or client-side mode:
 
-Example column definition:
+**Server-side mode** (default for this app - used in all admin pages):
+```typescript
+<DataTable
+  data={state.users}
+  columns={userColumns}
+  loading={state.loading}
+  totalItems={state.totalItems}
+  currentPage={state.currentPage}
+  pageSize={state.pageSize}
+  searchTerm={state.searchTerm}
+  sortConfig={state.sortConfig}
+  filters={state.filters}
+  onPageChange={actions.setPage}
+  onPageSizeChange={actions.setPageSize}
+  onSearchChange={actions.setSearch}
+  onSortChange={actions.setSort}
+  onFilterChange={actions.setFilters}
+  onRefresh={actions.refresh}
+  searchable={true}
+  emptyState={{
+    icon: Users,
+    title: "No users found",
+    description: "Get started by adding your first user",
+    action: <button onClick={() => setIsModalOpen(true)}>Add User</button>
+  }}
+/>
+```
+
+**Column definition structure:**
 ```typescript
 const columns: TableColumn<User>[] = [
   {
-    key: 'name',
+    key: 'name',              // Dot notation supported: 'wallet.balance'
     title: 'Name',
-    sortable: true,
-    render: (value, record) => <span className="font-medium">{value}</span>
+    sortable: true,           // Enable sorting for this column
+    render: (value, record) => (  // Custom render function
+      <span className="font-medium">{value}</span>
+    )
   }
 ];
 ```
+
+**Built-in features:**
+- Search with debouncing (300ms delay via `useDebounce` hook)
+- Sortable columns (click header to toggle asc/desc/none)
+- Filter dropdowns (pass `filterOptions` prop)
+- Pagination with page size selector
+- Export to CSV functionality
+- Loading states and empty states
+- Responsive design
 
 ## File Organization Rules
 
@@ -128,24 +181,24 @@ Required in `.env` (not committed):
 - `VITE_BASE_URL` - External backend API base URL (e.g., `http://localhost:3000/api` or production URL)
 
 ### Authentication Flow
-1. User creturned from external backend API
+1. User clicks "Login with Google" → redirected to Google OAuth
+2. After auth, redirected to `/auth/callback` with code
+3. Frontend exchanges code for session token via external backend API
 4. Frontend stores JWT in localStorage as `tkn`
 5. `ProtectedRoute` checks for `tkn` → redirects to `/login` if missing
 6. All subsequent API calls include token via axios interceptor
-4. Frontend stores JWT in localStorage as `tkn`
-5. `ProtectedRoute` checks for `tkn` → redirects to `/login` if missing
 
 ### Adding New Features
 **Example: Add a new "Products" CRUD**
-1. Define types in `src/react-app/types/produc (for frontend validation)
+1. Define types in `src/react-app/types/products.ts` (frontend types)
+2. Add Zod schemas in `src/shared/types.ts` (for frontend validation)
 3. Create API functions in `src/react-app/api/products.ts` (calls external backend)
 4. Create custom hook `src/react-app/hooks/useProducts.ts` (follow `useUsers.ts` pattern)
 5. Create page `src/react-app/pages/Products.tsx` using DataTable + modal components
 6. Create modal `src/react-app/components/ProductEditModal.tsx`
 7. Add route in `App.tsx` under ProtectedRoute
 
-**Note:** Backend endpoints must be added to the external API separately.uctEditModal.tsx`
-8. Add route in `App.tsx` under ProtectedRoute
+**Note:** Backend endpoints must be added to the external API separately.
 
 ## Common Pitfalls
 
@@ -153,15 +206,15 @@ Required in `.env` (not committed):
 
 2. **LocalStorage keys:** 
    - Auth token: `tkn` (set by login, cleared by logout in `lib/localStorage.ts`)
-   - External backend dependency:** All data operations require the external API to be running. Check `VITE_BASE_URL` configuration if API calls fail.
 
-4. **Image/video uploads:** Use `ImageUpload.tsx` and `VideoUpload.tsx` components which handle uploads via the external backendles.
+3. **External backend dependency:** All data operations require the external API to be running. Check `VITE_BASE_URL` configuration if API calls fail.
 
-4. **Image/video uploads:** Use `ImageUpload.tsx` and `VideoUpload.tsx` components which handle R2 bucket uploads via the worker API.
+4. **Image/video uploads:** Use `ImageUpload.tsx` and `VideoUpload.tsx` components which handle uploads via the external backend.
 
 5. **Debouncing searches:** Always use `useDebounce` hook for search inputs to avoid excessive API calls (see `DataTable.tsx` implementation).
 
-## Key Freact-app/hooks/useAxios.ts`](../src/react-app/hooks/useAxios.ts) - Axios instance with auth interceptor & backend URL config
+## Key Files
+- [`src/react-app/hooks/useAxios.ts`](../src/react-app/hooks/useAxios.ts) - Axios instance with auth interceptor & backend URL config
 - [`src/react-app/hooks/useServerSideTable.ts`](../src/react-app/hooks/useServerSideTable.ts) - Generic server-side table hook
 - [`src/react-app/components/DataTable.tsx`](../src/react-app/components/DataTable.tsx) - Reusable table with pagination/search/sort
 - [`src/react-app/contexts/ToastContext.tsx`](../src/react-app/contexts/ToastContext.tsx) - Toast notification system
@@ -169,5 +222,4 @@ Required in `.env` (not committed):
 - [`src/shared/types.ts`](../src/shared/types.ts) - Zod schemas for frontend validation
 
 **Deprecated:**
-- [`src/worker/index.ts`](../src/worker/index.ts) - No longer used; backend is externalontext.tsx) - Toast notification system
-- [`src/shared/types.ts`](../src/shared/types.ts) - Zod schemas for validation
+- [`src/worker/index.ts`](../src/worker/index.ts) - No longer used; backend is external
